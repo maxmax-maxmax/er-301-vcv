@@ -27,6 +27,9 @@ extern "C"
 #include <hal/display.h>
 #include <hal/rng.h>
 #include <emu/tls.h>
+
+  // Custom PWM readback for VCV lights
+  void Pwm_getLed(int channel, float *red, float *green);
 }
 
 #include <od/glue/AppInterpreter.h>
@@ -76,6 +79,43 @@ struct ER301Module : Module
 
   enum LightIds
   {
+    // GPIO LEDs (single color)
+    LIGHT_DIAL1,
+    LIGHT_DIAL2,
+    LIGHT_IO,
+    LIGHT_SAFE,
+    LIGHT_OUT1,
+    LIGHT_OUT2,
+    LIGHT_OUT3,
+    LIGHT_OUT4,
+    LIGHT_LINK12,
+    LIGHT_LINK23,
+    LIGHT_LINK34,
+    // CV input LEDs (green+red = 2 IDs each)
+    LIGHT_CV_A1_GREEN,
+    LIGHT_CV_A1_RED,
+    LIGHT_CV_A2_GREEN,
+    LIGHT_CV_A2_RED,
+    LIGHT_CV_A3_GREEN,
+    LIGHT_CV_A3_RED,
+    LIGHT_CV_B1_GREEN,
+    LIGHT_CV_B1_RED,
+    LIGHT_CV_B2_GREEN,
+    LIGHT_CV_B2_RED,
+    LIGHT_CV_B3_GREEN,
+    LIGHT_CV_B3_RED,
+    LIGHT_CV_C1_GREEN,
+    LIGHT_CV_C1_RED,
+    LIGHT_CV_C2_GREEN,
+    LIGHT_CV_C2_RED,
+    LIGHT_CV_C3_GREEN,
+    LIGHT_CV_C3_RED,
+    LIGHT_CV_D1_GREEN,
+    LIGHT_CV_D1_RED,
+    LIGHT_CV_D2_GREEN,
+    LIGHT_CV_D2_RED,
+    LIGHT_CV_D3_GREEN,
+    LIGHT_CV_D3_RED,
     NUM_LIGHTS
   };
 
@@ -302,6 +342,33 @@ struct ER301Module : Module
       framePos = 0;
       outputReadPos = 0;
     }
+
+    // Update GPIO-driven LEDs
+    lights[LIGHT_DIAL1].setBrightness(Gpio_read(LED_DIAL1) ? 1.f : 0.f);
+    lights[LIGHT_DIAL2].setBrightness(Gpio_read(LED_DIAL2) ? 1.f : 0.f);
+    lights[LIGHT_IO].setBrightness(Gpio_read(LED_IO) ? 1.f : 0.f);
+    lights[LIGHT_SAFE].setBrightness(Gpio_read(LED_SAFE) ? 1.f : 0.f);
+    lights[LIGHT_OUT1].setBrightness(Gpio_read(LED_OUT1) ? 1.f : 0.f);
+    lights[LIGHT_OUT2].setBrightness(Gpio_read(LED_OUT2) ? 1.f : 0.f);
+    lights[LIGHT_OUT3].setBrightness(Gpio_read(LED_OUT3) ? 1.f : 0.f);
+    lights[LIGHT_OUT4].setBrightness(Gpio_read(LED_OUT4) ? 1.f : 0.f);
+    lights[LIGHT_LINK12].setBrightness(Gpio_read(LED_LINK12) ? 1.f : 0.f);
+    lights[LIGHT_LINK23].setBrightness(Gpio_read(LED_LINK23) ? 1.f : 0.f);
+    lights[LIGHT_LINK34].setBrightness(Gpio_read(LED_LINK34) ? 1.f : 0.f);
+
+    // Update PWM-driven CV input LEDs (green/red per channel)
+    float pwmR, pwmG;
+    static const int cvLightIds[] = {
+        LIGHT_CV_A1_GREEN, LIGHT_CV_A2_GREEN, LIGHT_CV_A3_GREEN,
+        LIGHT_CV_B1_GREEN, LIGHT_CV_B2_GREEN, LIGHT_CV_B3_GREEN,
+        LIGHT_CV_C1_GREEN, LIGHT_CV_C2_GREEN, LIGHT_CV_C3_GREEN,
+        LIGHT_CV_D1_GREEN, LIGHT_CV_D2_GREEN, LIGHT_CV_D3_GREEN};
+    for (int i = 0; i < 12; i++)
+    {
+      Pwm_getLed(i, &pwmR, &pwmG);
+      lights[cvLightIds[i]].setBrightness(pwmG);
+      lights[cvLightIds[i] + 1].setBrightness(pwmR);
+    }
   }
 };
 
@@ -390,17 +457,17 @@ struct ER301Button : OpaqueWidget
     // Top label above button
     if (!topLabel.empty())
     {
-      nvgFontSize(vg, 7);
-      nvgFillColor(vg, nvgRGB(50, 50, 50));
+      nvgFontSize(vg, 8);
+      nvgFillColor(vg, nvgRGB(40, 40, 40));
       nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
-      nvgText(vg, w / 2, -1, topLabel.c_str(), NULL);
+      nvgText(vg, w / 2, -2, topLabel.c_str(), NULL);
     }
     if (!botLabel.empty())
     {
-      nvgFontSize(vg, 5.5f);
-      nvgFillColor(vg, nvgRGB(100, 100, 100));
+      nvgFontSize(vg, 6.5f);
+      nvgFillColor(vg, nvgRGB(80, 80, 80));
       nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
-      nvgText(vg, w / 2, -8, botLabel.c_str(), NULL);
+      nvgText(vg, w / 2, -10, botLabel.c_str(), NULL);
     }
   }
 };
@@ -468,54 +535,56 @@ struct ER301Toggle : OpaqueWidget
     NVGcontext *vg = args.vg;
     int state = getState();
 
-    // Title above
+    // Title above (like real panel: "STORAGE", "MODE")
     if (!label.empty())
     {
-      nvgFontSize(vg, 7);
-      nvgFillColor(vg, nvgRGB(50, 50, 50));
+      nvgFontSize(vg, 8);
+      nvgFillColor(vg, nvgRGB(40, 40, 40));
       nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-      nvgText(vg, 0, -2, label.c_str(), NULL);
+      nvgText(vg, 0, -3, label.c_str(), NULL);
     }
 
-    // Toggle slot
-    float slotX = 5;
-    float slotW = 4;
-    float slotTop = 6;
-    float slotBot = box.size.y - 6;
+    // Toggle body - vertical metal toggle like 4ms/standard VCV
+    float cx = 7;
+    float toggleH = box.size.y - 8;
+    float toggleTop = 4;
+
+    // Base plate
     nvgBeginPath(vg);
-    nvgRoundedRect(vg, slotX, slotTop, slotW, slotBot - slotTop, 2);
-    nvgFillColor(vg, nvgRGB(15, 15, 15));
+    nvgRoundedRect(vg, cx - 5, toggleTop, 10, toggleH, 2);
+    nvgFillColor(vg, nvgRGB(30, 30, 30));
     nvgFill(vg);
 
-    // Toggle lever
-    float leverY;
+    // Lever
+    float leverLen = toggleH * 0.45f;
+    float leverCy;
     if (state == 0)
-      leverY = slotTop + 2;
+      leverCy = toggleTop + toggleH * 0.22f;
     else if (state == 2)
-      leverY = slotBot - 10;
+      leverCy = toggleTop + toggleH * 0.78f;
     else
-      leverY = (slotTop + slotBot) / 2 - 4;
+      leverCy = toggleTop + toggleH * 0.5f;
 
+    float leverTop = leverCy - leverLen / 2;
     nvgBeginPath(vg);
-    nvgRoundedRect(vg, slotX - 2, leverY, slotW + 4, 8, 2);
-    NVGpaint metalGrad = nvgLinearGradient(vg, slotX - 2, leverY, slotX + slotW + 2, leverY + 8,
-                                           nvgRGB(180, 180, 180), nvgRGB(120, 120, 120));
+    nvgRoundedRect(vg, cx - 3, leverTop, 6, leverLen, 2);
+    NVGpaint metalGrad = nvgLinearGradient(vg, cx - 3, leverTop, cx + 3, leverTop + leverLen,
+                                           nvgRGB(210, 210, 212), nvgRGB(160, 160, 162));
     nvgFillPaint(vg, metalGrad);
     nvgFill(vg);
-    nvgStrokeColor(vg, nvgRGB(60, 60, 60));
+    nvgStrokeColor(vg, nvgRGB(100, 100, 100));
     nvgStrokeWidth(vg, 0.5f);
     nvgStroke(vg);
 
-    // Position labels
-    float textX = 16;
-    float spacing = (slotBot - slotTop) / 2.0f;
+    // Position labels with arrows
+    float textX = 17;
+    float positions[] = {toggleTop + toggleH * 0.22f, toggleTop + toggleH * 0.5f, toggleTop + toggleH * 0.78f};
     for (int i = 0; i < 3; i++)
     {
-      float cy = slotTop + spacing * i;
-      nvgFontSize(vg, 6);
-      nvgFillColor(vg, nvgRGB(80, 80, 80));
+      nvgFontSize(vg, 7);
+      nvgFillColor(vg, nvgRGB(50, 50, 50));
       nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-      nvgText(vg, textX, cy + 2, labels[i], NULL);
+      nvgText(vg, textX, positions[i], labels[i], NULL);
     }
   }
 };
@@ -631,26 +700,25 @@ struct ER301Widget : ModuleWidget
   static constexpr int SCREEN_BRIGHTNESS = 15;
   static constexpr float SCREEN_TINT = 0.85f;
 
-  // Layout scale: emulator is 505x370, VCV panel is 380px tall
-  // Scale to fit height: 380/370 ≈ 1.027, use 1.0 for near-1:1 match
+  // 1:1 with emulator layout (505x370), which matches real ER-301 proportions
   static constexpr float S = 1.0f;
-  static constexpr float MARGIN = 16 * S;
+  static constexpr float MARGIN = 16;
 
-  // Emu layout constants scaled
-  static constexpr float MAIN_DW = 256 * S;
-  static constexpr float MAIN_DH = 64 * S;
-  static constexpr float B_SP = 6 * S;
-  static constexpr float DB_SP = 24 * S;
-  static constexpr float BTN_W = (256 / 6 - 6) * S;
+  // Emu layout constants (direct from constants.h)
+  static constexpr float MAIN_DW = 256;
+  static constexpr float MAIN_DH = 64;
+  static constexpr float B_SP = 6;
+  static constexpr float DB_SP = 24;
+  static constexpr float BTN_W = 256 / 6 - 6; // 36
   static constexpr float BTN_H = BTN_W;
-  static constexpr float KNOB_W_S = (256 / 2 - 6) * S;
-  static constexpr float KNOB_H_S = 100 * S;
-  static constexpr float SUB_DW = 128 * S;
-  static constexpr float SUB_DH = 64 * S;
-  static constexpr float J_OUTER = 17 * S;
-  static constexpr float J_DIVIDER = 50 * S;
-  static constexpr float J_HSPACING = 2 * (17 + 8) * S;
-  static constexpr float TOGGLE_WS = (256 / 6 - 6 + 6) * S;
+  static constexpr float KNOB_W_S = 256 / 2 - 6; // 122
+  static constexpr float KNOB_H_S = 100;
+  static constexpr float SUB_DW = 128;
+  static constexpr float SUB_DH = 64;
+  static constexpr float J_OUTER = 17;
+  static constexpr float J_DIVIDER = 50;
+  static constexpr float J_HSPACING = 2 * (17 + 8); // 50
+  static constexpr float TOGGLE_WS = 256 / 6 - 6 + 6; // 42
   static constexpr float TOGGLE_HS = BTN_H;
 
   // Computed positions
@@ -703,6 +771,7 @@ struct ER301Widget : ModuleWidget
     j5Y = j4Y + jvSpacing;
     j6Y = j5Y + jvSpacing;
 
+    // Jack columns (exact emulator layout)
     j1X = mainDispX + MAIN_DW + J_DIVIDER;
     j2X = j1X + J_HSPACING;
     j3X = j2X + J_HSPACING;
@@ -714,17 +783,24 @@ struct ER301Widget : ModuleWidget
     jb3Y = j3Y - BTN_H / 2;
     jb4Y = j4Y - BTN_H / 2;
 
-    tStorageX = mb1X - 5 * S;
+    tStorageX = mb1X - 5;
     tStorageY = j7Y - TOGGLE_HS / 2;
-    tModeX = mb3X - 5 * S;
+    tModeX = mb3X - 5;
     tModeY = tStorageY;
 
     ledOut1X = (mainDispX + MAIN_DW + jb1X) / 2;
 
-    // Set panel width to fit everything
+    // Panel size from emulator layout (505x370 -> round to HP grid)
     float panelW = j4X + J_OUTER + MARGIN;
-    float panelH = RACK_GRID_HEIGHT;
-    box.size = Vec(panelW, panelH);
+    int hp = (int)ceilf(panelW / RACK_GRID_WIDTH);
+    panelW = hp * RACK_GRID_WIDTH;
+    box.size = Vec(panelW, RACK_GRID_HEIGHT);
+
+    // === Standard VCV screws ===
+    addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
+    addChild(createWidget<ScrewSilver>(Vec(panelW - 2 * RACK_GRID_WIDTH, 0)));
+    addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+    addChild(createWidget<ScrewSilver>(Vec(panelW - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
     // === M1-M6 main buttons (gray, hardware labels) ===
     addChild(new ER301Button(BUTTON_MAIN1, Vec(mb1X, mb1Y), Vec(BTN_W, BTN_H), false, "M1", "QUICKSAVE"));
@@ -763,6 +839,52 @@ struct ER301Widget : ModuleWidget
     addChild(new ER301Toggle(TOGGLE_MODE_A, TOGGLE_MODE_B,
                              Vec(tModeX, tModeY), Vec(TOGGLE_WS, TOGGLE_HS),
                              "MODE", "hold", "edit", "scope"));
+
+    // === GPIO LEDs (VCV standard lights, positions from real panel) ===
+    // Fine/Coarse LEDs near knob (left side, below sub display)
+    float ledDial1X = mb1X + 10;
+    float ledDial1Y = subDispY + SUB_DH - 12;
+    float ledDial2X = ledDial1X + BTN_W / 2;
+    float ledDial2Y = ledDial1Y + BTN_H / 2;
+    addChild(createLightCentered<MediumLight<RedLight>>(Vec(ledDial1X, ledDial1Y), module, ER301Module::LIGHT_DIAL1));
+    addChild(createLightCentered<MediumLight<RedLight>>(Vec(ledDial2X, ledDial2Y), module, ER301Module::LIGHT_DIAL2));
+
+    // I/O and Safe LEDs (near storage/mode toggle area)
+    float ledIOX = mb2X + 4;
+    float ledIOY = j7Y - BTN_W / 4;
+    float ledSafeY = j7Y + BTN_W / 4;
+    addChild(createLightCentered<MediumLight<RedLight>>(Vec(ledIOX, ledIOY), module, ER301Module::LIGHT_IO));
+    addChild(createLightCentered<MediumLight<RedLight>>(Vec(ledIOX, ledSafeY), module, ER301Module::LIGHT_SAFE));
+
+    // Output LEDs (orange/yellow, right of select buttons on real panel)
+    addChild(createLightCentered<MediumLight<YellowLight>>(Vec(ledOut1X, j1Y), module, ER301Module::LIGHT_OUT1));
+    addChild(createLightCentered<MediumLight<YellowLight>>(Vec(ledOut1X, j2Y), module, ER301Module::LIGHT_OUT2));
+    addChild(createLightCentered<MediumLight<YellowLight>>(Vec(ledOut1X, j3Y), module, ER301Module::LIGHT_OUT3));
+    addChild(createLightCentered<MediumLight<YellowLight>>(Vec(ledOut1X, j4Y), module, ER301Module::LIGHT_OUT4));
+
+    // Link LEDs (red, between output rows)
+    addChild(createLightCentered<MediumLight<RedLight>>(Vec(ledOut1X, (j1Y + j2Y) / 2), module, ER301Module::LIGHT_LINK12));
+    addChild(createLightCentered<MediumLight<RedLight>>(Vec(ledOut1X, (j2Y + j3Y) / 2), module, ER301Module::LIGHT_LINK23));
+    addChild(createLightCentered<MediumLight<RedLight>>(Vec(ledOut1X, (j3Y + j4Y) / 2), module, ER301Module::LIGHT_LINK34));
+
+    // === CV input LEDs (green/red bicolor, above each A1-D3 jack) ===
+    static const int cvGreenIds[] = {
+        ER301Module::LIGHT_CV_A1_GREEN, ER301Module::LIGHT_CV_A2_GREEN, ER301Module::LIGHT_CV_A3_GREEN,
+        ER301Module::LIGHT_CV_B1_GREEN, ER301Module::LIGHT_CV_B2_GREEN, ER301Module::LIGHT_CV_B3_GREEN,
+        ER301Module::LIGHT_CV_C1_GREEN, ER301Module::LIGHT_CV_C2_GREEN, ER301Module::LIGHT_CV_C3_GREEN,
+        ER301Module::LIGHT_CV_D1_GREEN, ER301Module::LIGHT_CV_D2_GREEN, ER301Module::LIGHT_CV_D3_GREEN};
+    float cvJxArr[] = {j1X, j2X, j3X, j4X};
+    float cvJyArr[] = {j5Y, j6Y, j7Y};
+    for (int col = 0; col < 4; col++)
+    {
+      for (int row = 0; row < 3; row++)
+      {
+        int idx = col * 3 + row;
+        // Place LED to the left of the jack with breathing room
+        addChild(createLightCentered<MediumLight<GreenRedLight>>(
+            Vec(cvJxArr[col] - 19, cvJyArr[row]), module, cvGreenIds[idx]));
+      }
+    }
 
     // === Jack ports ===
     // Gate inputs: G1-G4 at j2X, j1Y-j4Y
@@ -849,35 +971,6 @@ struct ER301Widget : ModuleWidget
     }
   }
 
-  void drawLed(NVGcontext *vg, float x, float y, uint32_t id, int r, int g, int b, const char *label = nullptr, bool side = true)
-  {
-    float radius = 4 * S;
-    bool on = Gpio_read(id);
-    nvgBeginPath(vg);
-    nvgCircle(vg, x, y, radius);
-    if (on)
-      nvgFillColor(vg, nvgRGB(r, g, b));
-    else
-      nvgFillColor(vg, nvgRGB(r / 4, g / 4, b / 4));
-    nvgFill(vg);
-
-    if (label)
-    {
-      nvgFontSize(vg, 6);
-      nvgFillColor(vg, nvgRGB(40, 40, 40));
-      if (side)
-      {
-        nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-        nvgText(vg, x - radius - 2, y, label, NULL);
-      }
-      else
-      {
-        nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
-        nvgText(vg, x, y - radius - 1, label, NULL);
-      }
-    }
-  }
-
   void draw(const DrawArgs &args) override
   {
     NVGcontext *vg = args.vg;
@@ -889,63 +982,56 @@ struct ER301Widget : ModuleWidget
       Events_push(EVENT_DISPLAY_READY);
     }
 
-    // Silver/light gray panel like real hardware
+    float pw = box.size.x;
+    float ph = box.size.y;
+
+    // ── Panel background (light silver matching Teletype/monome style) ──
     nvgBeginPath(vg);
-    nvgRect(vg, 0, 0, box.size.x, box.size.y);
-    nvgFillColor(vg, nvgRGB(210, 210, 212));
+    nvgRect(vg, 0, 0, pw, ph);
+    nvgFillColor(vg, nvgRGB(228, 228, 230));
     nvgFill(vg);
 
-    // Screws in corners (standard VCV style)
-    float screwR = 5;
-    float screwInset = 10;
-    float screwPositions[][2] = {
-        {screwInset, screwInset},
-        {box.size.x - screwInset, screwInset},
-        {screwInset, box.size.y - screwInset},
-        {box.size.x - screwInset, box.size.y - screwInset}};
-    for (auto &sp : screwPositions)
-    {
-      // Screw recess
-      nvgBeginPath(vg);
-      nvgCircle(vg, sp[0], sp[1], screwR);
-      NVGpaint screwGrad = nvgRadialGradient(vg, sp[0] - 1, sp[1] - 1, 0, screwR,
-                                              nvgRGB(190, 190, 192), nvgRGB(150, 150, 152));
-      nvgFillPaint(vg, screwGrad);
-      nvgFill(vg);
-      nvgStrokeColor(vg, nvgRGB(140, 140, 140));
-      nvgStrokeWidth(vg, 0.5f);
-      nvgStroke(vg);
-      // Cross slot
-      nvgBeginPath(vg);
-      nvgMoveTo(vg, sp[0] - 3, sp[1]);
-      nvgLineTo(vg, sp[0] + 3, sp[1]);
-      nvgMoveTo(vg, sp[0], sp[1] - 3);
-      nvgLineTo(vg, sp[0], sp[1] + 3);
-      nvgStrokeColor(vg, nvgRGB(120, 120, 120));
-      nvgStrokeWidth(vg, 0.75f);
-      nvgStroke(vg);
-    }
+    // ── Panel border ──
+    nvgBeginPath(vg);
+    nvgRect(vg, 0.5f, 0.5f, pw - 1, ph - 1);
+    nvgStrokeColor(vg, nvgRGB(160, 160, 162));
+    nvgStrokeWidth(vg, 0.75f);
+    nvgStroke(vg);
 
-    // Title
-    nvgFontSize(vg, 11);
-    nvgFillColor(vg, nvgRGB(40, 40, 40));
-    nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-    nvgText(vg, mainDispX + 40, 3, "ER-301", NULL);
-    nvgFontSize(vg, 8);
-    nvgFillColor(vg, nvgRGB(100, 100, 100));
-    nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-    nvgText(vg, mainDispX + 88, 4.5f, "SOUND COMPUTER", NULL);
-
-    // Jack column headers
-    nvgFontSize(vg, 7);
-    nvgFillColor(vg, nvgRGB(80, 80, 80));
-    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
-    nvgText(vg, j2X, j1Y - J_OUTER + 2, "G", NULL);
-    nvgText(vg, j3X, j1Y - J_OUTER + 2, "IN", NULL);
-    nvgText(vg, j4X, j1Y - J_OUTER + 2, "OUT", NULL);
-
-    // Channel numbers on select buttons
+    // ── Title: "ER-301  SOUND COMPUTER" centered at top ──
+    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+    float titleY = 8;
+    nvgFontSize(vg, 13);
+    nvgFillColor(vg, nvgRGB(50, 50, 50));
+    nvgText(vg, pw * 0.38f, titleY, "ER-301", NULL);
     nvgFontSize(vg, 9);
+    nvgFillColor(vg, nvgRGB(80, 80, 80));
+    nvgText(vg, pw * 0.60f, titleY, "SOUND COMPUTER", NULL);
+
+    // ── Jack column headers: G, IN, OUT ──
+    nvgFontSize(vg, 9);
+    nvgFillColor(vg, nvgRGB(50, 50, 50));
+    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
+    nvgText(vg, j2X, j1Y - J_OUTER + 4, "G", NULL);
+    nvgText(vg, j3X, j1Y - J_OUTER + 4, "IN", NULL);
+    nvgText(vg, j4X, j1Y - J_OUTER + 4, "OUT", NULL);
+
+    // ── Vertical divider lines between jack columns ──
+    float jackTop = j1Y - J_OUTER + 8;
+    float jackBot = j4Y + J_OUTER - 4;
+    nvgStrokeColor(vg, nvgRGB(175, 175, 177));
+    nvgStrokeWidth(vg, 0.5f);
+    float divX1 = (j1X + j2X) / 2;
+    float divX2 = (j2X + j3X) / 2;
+    float divX3 = (j3X + j4X) / 2;
+    nvgBeginPath(vg);
+    nvgMoveTo(vg, divX1, jackTop); nvgLineTo(vg, divX1, jackBot);
+    nvgMoveTo(vg, divX2, jackTop); nvgLineTo(vg, divX2, jackBot);
+    nvgMoveTo(vg, divX3, jackTop); nvgLineTo(vg, divX3, jackBot);
+    nvgStroke(vg);
+
+    // ── Channel numbers on select buttons ──
+    nvgFontSize(vg, 11);
     nvgFillColor(vg, nvgRGB(220, 220, 220));
     nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     nvgText(vg, jb1X + BTN_W / 2, jb1Y + BTN_H / 2, "1", NULL);
@@ -953,9 +1039,60 @@ struct ER301Widget : ModuleWidget
     nvgText(vg, jb1X + BTN_W / 2, jb3Y + BTN_H / 2, "3", NULL);
     nvgText(vg, jb1X + BTN_W / 2, jb4Y + BTN_H / 2, "4", NULL);
 
-    // CV jack labels (A1-D3)
-    nvgFontSize(vg, 6);
-    nvgFillColor(vg, nvgRGB(80, 80, 80));
+    // ── "linked" labels to the right of link LEDs ──
+    nvgFontSize(vg, 6.5f);
+    nvgFillColor(vg, nvgRGB(60, 60, 60));
+    nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    float linkX = ledOut1X + 7;
+    nvgText(vg, linkX, (j1Y + j2Y) / 2, "linked", NULL);
+    nvgText(vg, linkX, (j2Y + j3Y) / 2, "linked", NULL);
+    nvgText(vg, linkX, (j3Y + j4Y) / 2, "linked", NULL);
+
+    // ── Fine/Coarse LED labels near knob ──
+    float ledDial1X = mb1X + 10;
+    float ledDial1Y = subDispY + SUB_DH - 12;
+    float ledDial2X = ledDial1X + BTN_W / 2;
+    float ledDial2Y = ledDial1Y + BTN_H / 2;
+    nvgFontSize(vg, 6.5f);
+    nvgFillColor(vg, nvgRGB(50, 50, 50));
+    nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+    nvgText(vg, ledDial1X - 7, ledDial1Y, "fine", NULL);
+    nvgText(vg, ledDial2X - 7, ledDial2Y, "coarse", NULL);
+
+    // ── I/O and Safe LED labels ──
+    float ledIOX = mb2X + 4;
+    float ledIOY = j7Y - BTN_W / 4;
+    float ledSafeY = j7Y + BTN_W / 4;
+    nvgFontSize(vg, 6.5f);
+    nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    nvgText(vg, ledIOX + 7, ledIOY, "I/O", NULL);
+    nvgText(vg, ledIOX + 7, ledSafeY, "safe", NULL);
+
+    // ── Storage section divider ──
+    float stX = 4;
+    float stY = tStorageY - 14;
+    float stW = (mb2X + mb3X) / 2 - stX;
+    float stH = ph - 18 - stY;
+    nvgBeginPath(vg);
+    nvgRoundedRect(vg, stX, stY, stW, stH, 2);
+    nvgStrokeColor(vg, nvgRGB(175, 175, 177));
+    nvgStrokeWidth(vg, 0.5f);
+    nvgStroke(vg);
+
+    // ── ABCD jack section divider ──
+    float abcdX = j1X - J_HSPACING / 2 - 4;
+    float abcdY = (j4Y + j5Y) / 2;
+    float abcdW = pw - 4 - abcdX;
+    float abcdH = ph - 18 - abcdY;
+    nvgBeginPath(vg);
+    nvgRoundedRect(vg, abcdX, abcdY, abcdW, abcdH, 2);
+    nvgStrokeColor(vg, nvgRGB(175, 175, 177));
+    nvgStrokeWidth(vg, 0.5f);
+    nvgStroke(vg);
+
+    // ── CV jack labels (A1-D3) ──
+    nvgFontSize(vg, 8);
+    nvgFillColor(vg, nvgRGB(60, 60, 60));
     nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
     const char *cvCols[] = {"A", "B", "C", "D"};
     float jxArr[] = {j1X, j2X, j3X, j4X};
@@ -966,23 +1103,24 @@ struct ER301Widget : ModuleWidget
       {
         char buf[4];
         snprintf(buf, sizeof(buf), "%s%d", cvCols[col], row + 1);
-        nvgText(vg, jxArr[col], jyArr[row] - 11, buf, NULL);
+        nvgText(vg, jxArr[col], jyArr[row] - 14, buf, NULL);
       }
     }
 
-    // Bottom voltage specs
-    nvgFontSize(vg, 5.5f);
-    nvgFillColor(vg, nvgRGB(100, 100, 100));
+    // ── Bottom voltage specs (matching real panel) ──
+    float bottomY = ph - 4;
+    nvgFontSize(vg, 6);
     nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
-    float bottomY = box.size.y - 4;
-    nvgText(vg, box.size.x / 2, bottomY, "G: 0V-10V  |  IN+ABCD: -10V to 10V  |  OUT: -7V to 7V", NULL);
+    nvgFillColor(vg, nvgRGB(80, 80, 80));
+    nvgText(vg, pw * 0.17f, bottomY, "G: 0V-10V | 12-bit", NULL);
+    nvgText(vg, pw * 0.5f, bottomY, "IN+ABCD: -10V-10V | 16-bit", NULL);
+    nvgText(vg, pw * 0.83f, bottomY, "OUT: -7V-7V | 24-bit", NULL);
 
-    // === Main Display ===
+    // ── Main Display ──
     nvgBeginPath(vg);
-    nvgRect(vg, mainDispX - 1, mainDispY - 1, MAIN_DW + 2, MAIN_DH + 2);
-    nvgStrokeColor(vg, nvgRGB(0, 0, 0));
-    nvgStrokeWidth(vg, 1.0f);
-    nvgStroke(vg);
+    nvgRect(vg, mainDispX - 2, mainDispY - 2, MAIN_DW + 4, MAIN_DH + 4);
+    nvgFillColor(vg, nvgRGB(0, 0, 0));
+    nvgFill(vg);
 
     DisplayBuffer *dispBuf = Display_getLastPutBuffer();
     if (dispBuf)
@@ -1010,12 +1148,11 @@ struct ER301Widget : ModuleWidget
       nvgFill(vg);
     }
 
-    // === Sub Display ===
+    // ── Sub Display ──
     nvgBeginPath(vg);
-    nvgRect(vg, subDispX - 1, subDispY - 1, SUB_DW + 2, SUB_DH + 2);
-    nvgStrokeColor(vg, nvgRGB(0, 0, 0));
-    nvgStrokeWidth(vg, 1.0f);
-    nvgStroke(vg);
+    nvgRect(vg, subDispX - 2, subDispY - 2, SUB_DW + 4, SUB_DH + 4);
+    nvgFillColor(vg, nvgRGB(0, 0, 0));
+    nvgFill(vg);
 
     if (dispBuf)
     {
@@ -1041,64 +1178,6 @@ struct ER301Widget : ModuleWidget
       nvgFillColor(vg, nvgRGB(0, 0, 0));
       nvgFill(vg);
     }
-
-    // === LEDs ===
-    // Fine/Coarse LEDs near knob
-    float ledDial1X = mb1X + 4 * S + 4 * S;
-    float ledDial1Y = subDispY + SUB_DH - 2 * 4 * S;
-    float ledDial2X = ledDial1X + BTN_W / 2;
-    float ledDial2Y = ledDial1Y + BTN_H / 2;
-    drawLed(vg, ledDial1X, ledDial1Y, LED_DIAL1, 230, 0, 0, "fine");
-    drawLed(vg, ledDial2X, ledDial2Y, LED_DIAL2, 230, 0, 0, "coarse");
-
-    // I/O and Safe LEDs
-    float ledIOX = mb2X + 4 * S;
-    float ledIOY = j7Y - BTN_W / 4;
-    float ledSafeY = j7Y + BTN_W / 4;
-    drawLed(vg, ledIOX, ledIOY, LED_IO, 230, 0, 0, "I/O");
-    drawLed(vg, ledIOX, ledSafeY, LED_SAFE, 230, 0, 0, "safe");
-
-    // Output LEDs (orange)
-    drawLed(vg, ledOut1X, jb1Y + BTN_H / 2, LED_OUT1, 220, 110, 0);
-    drawLed(vg, ledOut1X, jb2Y + BTN_H / 2, LED_OUT2, 220, 110, 0);
-    drawLed(vg, ledOut1X, jb3Y + BTN_H / 2, LED_OUT3, 220, 110, 0);
-    drawLed(vg, ledOut1X, jb4Y + BTN_H / 2, LED_OUT4, 220, 110, 0);
-
-    // Link LEDs (red)
-    drawLed(vg, ledOut1X, (jb1Y + jb2Y) / 2 + BTN_W / 2, LED_LINK12, 230, 0, 0, "linked");
-    drawLed(vg, ledOut1X, (jb2Y + jb3Y) / 2 + BTN_W / 2, LED_LINK23, 230, 0, 0, "linked");
-    drawLed(vg, ledOut1X, (jb3Y + jb4Y) / 2 + BTN_W / 2, LED_LINK34, 230, 0, 0, "linked");
-
-    // === Section divider lines (subtle, like real hardware) ===
-    // Storage section
-    float stOutX = MARGIN / 2;
-    float stOutY = tStorageY - 16 * S;
-    float stOutW = (mb2X + mb3X) / 2 - MARGIN / 2 + 12 * S;
-    float stOutH = MARGIN / 2 + box.size.y - MARGIN - stOutY;
-    nvgBeginPath(vg);
-    nvgRect(vg, stOutX, stOutY, stOutW, stOutH);
-    nvgStrokeColor(vg, nvgRGB(150, 150, 150));
-    nvgStrokeWidth(vg, 0.75f);
-    nvgStroke(vg);
-
-    // ABCD jack section
-    float abcdX = ledOut1X;
-    float abcdY = (j4Y + j5Y) / 2;
-    float abcdW = MARGIN / 2 + box.size.x - MARGIN - abcdX;
-    float abcdH = MARGIN / 2 + box.size.y - MARGIN - abcdY;
-    nvgBeginPath(vg);
-    nvgRect(vg, abcdX, abcdY, abcdW, abcdH);
-    nvgStrokeColor(vg, nvgRGB(150, 150, 150));
-    nvgStrokeWidth(vg, 0.75f);
-    nvgStroke(vg);
-
-    // I/O label near LED
-    nvgFontSize(vg, 7);
-    nvgFillColor(vg, nvgRGB(40, 40, 40));
-    nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-    float ioLblX = (mb2X + mb3X) / 2 + 8 * S;
-    nvgText(vg, ioLblX, ledIOY, "I/O", NULL);
-    nvgText(vg, ioLblX, ledSafeY, "safe", NULL);
 
     ModuleWidget::draw(args);
   }

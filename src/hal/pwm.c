@@ -65,3 +65,10 @@ void Pwm_init(void)
     self.green[i] = 2 * i + 1;
   }
 }
+
+// Read back LED brightness for VCV light rendering
+void Pwm_getLed(int channel, float *red, float *green)
+{
+  *red = self.data[self.red[channel]] / (float)0xFFF;
+  *green = self.data[self.green[channel]] / (float)0xFFF;
+}
