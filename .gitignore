@@ -1,0 +1,21 @@
+# Build artifacts
+build/
+dist/
+plugin.dylib
+*.vcvplugin
+*.o
+*.d
+
+# SDK (user downloads separately)
+Rack-SDK/
+
+# Dependencies
+dep/
+
+# OS files
+.DS_Store
+*.swp
+*~
+
+# er-301 symlink (user creates locally)
+er-301

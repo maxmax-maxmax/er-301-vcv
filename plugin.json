@@ -1,0 +1,19 @@
+{
+  "slug": "ER-301",
+  "name": "ER-301 Sound Computer",
+  "version": "2.0.0",
+  "license": "GPL-3.0-or-later",
+  "brand": "ER-301",
+  "author": "maxmax-maxmax",
+  "authorUrl": "https://github.com/maxmax-maxmax",
+  "pluginUrl": "https://github.com/maxmax-maxmax/er-301-vcv",
+  "sourceUrl": "https://github.com/maxmax-maxmax/er-301-vcv",
+  "modules": [
+    {
+      "slug": "ER301",
+      "name": "ER-301 Sound Computer",
+      "description": "Full ER-301 Sound Computer emulation as a VCV Rack module",
+      "tags": ["Digital", "Sampler", "Granular", "Delay", "Filter", "Utility"]
+    }
+  ]
+}
