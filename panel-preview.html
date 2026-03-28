@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ER-301 VCV Panel Preview</title>
+<style>
+  body { background: #333; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; font-family: sans-serif; }
+  .scale-label { color: #aaa; text-align: center; margin-bottom: 8px; font-size: 13px; }
+  canvas { border: 1px solid #555; display: block; margin: 0 auto 30px; }
+</style>
+</head>
+<body>
+<div class="scale-label">2x preview (actual VCV: 457 x 380 px = 30HP)</div>
+<canvas id="panel" width="914" height="760"></canvas>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// ER-301 VCV Panel Layout — 30HP
+// ═══════════════════════════════════════════════════════════════
+const RACK_GRID_WIDTH = 15.24;
+const PW = 30 * RACK_GRID_WIDTH; // 457.2
+const PH = 380;
+
+// ── Proportions from real panel ──
+// Left section (~54%): display, buttons, knob, toggles
+// Right section (~46%): select btns, G/IN/OUT jacks, ABCD jacks
+
+// Display sizes (scaled from 256x64 and 128x64 hardware buffers)
+const MAIN_DW = 210, MAIN_DH = 56;
+const SUB_DW = 105, SUB_DH = 56;
+
+// Widget sizes
+const BTN_W = 24, BTN_H = 24;
+const TOGGLE_W = 36, TOGGLE_H = 32;
+const KNOB_DIA = 80; // knob diameter
+
+const LM = 8;  // left margin
+const RM = 6;  // right margin
+
+// ── Horizontal layout ──
+const mainDispX = LM;
+const leftEdge = LM + MAIN_DW; // right edge of display area = 218
+
+// Right section: 4 columns spanning from after display to right edge
+// Columns: SEL | G | IN | OUT  (upper), A | B | C | D (lower)
+const rightStart = leftEdge + 16;  // 234 — first column center (select/A)
+const rightEnd = PW - RM - 12;     // 439 — last column center (OUT/D)
+const colSpan = rightEnd - rightStart; // 205
+const colStep = colSpan / 3;       // ~68.3 between column centers
+
+const j1X = rightStart;                // 234 — select/A
+const j2X = rightStart + colStep;      // 302 — G/B
+const j3X = rightStart + 2 * colStep;  // 371 — IN/C
+const j4X = rightEnd;                  // 439 — OUT/D
+
+// ── Vertical layout ──
+const mainDispY = 20;
+const mbY = 98;                    // M buttons
+const knobY = 130;                 // Knob area start
+const knobH = 80;                  // Knob area height
+const subDispX = LM + MAIN_DW - SUB_DW; // sub display right-aligned with main
+const subDispY = knobY + (knobH - SUB_DH) / 2;
+
+const fineX = LM + 24;
+const fineY = knobY + knobH + 8;  // 218
+const coarseY = fineY + 12;       // 230
+
+const sbY = 244;                   // dial/sub button row
+const hbY = 286;                   // hard buttons/toggles row
+
+// Toggle positions
+const tStorageX = LM;
+const tStorageY = hbY;
+
+// M button positions — 6 buttons evenly across display width
+const btnMargin = 5;
+const mbSpan = MAIN_DW - btnMargin * 2 - BTN_W;
+const mbStep = mbSpan / 5;
+const mbXs = [];
+for (let i = 0; i < 6; i++) mbXs.push(LM + btnMargin + i * mbStep);
+const [mb1X, mb2X, mb3X, mb4X, mb5X, mb6X] = mbXs;
+
+const tModeX = mb3X - 2;
+const tModeY = hbY;
+
+const ioLedX = tStorageX + TOGGLE_W + 8;
+const ioLedY = tStorageY + 8;
+const safeLedY = tStorageY + TOGGLE_H - 4;
+
+// Right panel Y positions — upper section (rows 1-4)
+const j1Y = 38, j2Y = 94, j3Y = 150, j4Y = 206;
+
+// ABCD divider Y
+const abcdDivY = 230;
+
+// Lower section — ABCD (rows 5-7)
+const j5Y = 254, j6Y = 302, j7Y = 350;
+
+// Select button X (centered on j1X)
+const selBtnX = j1X - BTN_W / 2;
+
+// Output LEDs — between IN and OUT columns
+const outLedX = (j3X + j4X) / 2;
+
+// Knob position (left half of left section)
+const knobX = LM;
+
+function drawPanel(ctx, scale) {
+  ctx.save();
+  ctx.scale(scale, scale);
+
+  // Panel background
+  ctx.fillStyle = '#e4e4e6';
+  ctx.fillRect(0, 0, PW, PH);
+
+  // Panel border
+  ctx.strokeStyle = '#a0a0a2';
+  ctx.lineWidth = 0.75;
+  ctx.strokeRect(0.5, 0.5, PW - 1, PH - 1);
+
+  // Screws
+  drawScrew(ctx, 0, 0);
+  drawScrew(ctx, PW - RACK_GRID_WIDTH, 0);
+  drawScrew(ctx, 0, PH - RACK_GRID_WIDTH);
+  drawScrew(ctx, PW - RACK_GRID_WIDTH, PH - RACK_GRID_WIDTH);
+
+  // ── Title (centered over display area) ──
+  const titleCx = LM + MAIN_DW / 2;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillStyle = '#1e1e1e';
+  ctx.fillText('ER-301', titleCx - 30, 12);
+  ctx.font = '8px sans-serif';
+  ctx.fillStyle = '#505050';
+  ctx.fillText('SOUND COMPUTER', titleCx + 50, 12);
+
+  // ── Main Display bezel ──
+  ctx.fillStyle = '#000';
+  roundRect(ctx, mainDispX - 3, mainDispY - 3, MAIN_DW + 6, MAIN_DH + 6, 4);
+  ctx.fill();
+  ctx.fillStyle = '#1a1500';
+  ctx.fillRect(mainDispX, mainDispY, MAIN_DW, MAIN_DH);
+  ctx.font = '9px monospace';
+  ctx.fillStyle = '#ff9900';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Main Display (256x64)', mainDispX + MAIN_DW/2, mainDispY + MAIN_DH/2);
+
+  // ── M buttons ──
+  const mBtns = [
+    { x: mb1X, label: 'M1', pill: 'QUICKSAVE' },
+    { x: mb2X, label: 'M2' },
+    { x: mb3X, label: 'M3' },
+    { x: mb4X, label: 'M4' },
+    { x: mb5X, label: 'M5' },
+    { x: mb6X, label: 'M6', pill: 'FOCUS' },
+  ];
+  for (const b of mBtns) drawButton(ctx, b.x, mbY, BTN_W, BTN_H, false, b.label, b.pill);
+
+  // ── Knob ──
+  const knobCx = knobX + KNOB_DIA / 2;
+  const knobCy = knobY + knobH / 2;
+  const knobR = KNOB_DIA / 2 - 4;
+  ctx.beginPath();
+  ctx.arc(knobCx + 1.5, knobCy + 1.5, knobR + 1, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fill();
+  const grad = ctx.createRadialGradient(knobCx - knobR*0.3, knobCy - knobR*0.3, 0, knobCx, knobCy, knobR);
+  grad.addColorStop(0, '#323232');
+  grad.addColorStop(1, '#0f0f0f');
+  ctx.beginPath();
+  ctx.arc(knobCx, knobCy, knobR, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = '#050505';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  for (let i = 0; i < 20; i++) {
+    const angle = i * 18 * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(knobCx + (knobR-3)*Math.cos(angle), knobCy + (knobR-3)*Math.sin(angle));
+    ctx.lineTo(knobCx + (knobR-0.5)*Math.cos(angle), knobCy + (knobR-0.5)*Math.sin(angle));
+    ctx.strokeStyle = '#282828';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.arc(knobCx, knobCy, knobR * 0.35, 0, Math.PI * 2);
+  ctx.fillStyle = '#191919';
+  ctx.fill();
+
+  // ── Sub Display bezel ──
+  ctx.fillStyle = '#000';
+  roundRect(ctx, subDispX - 3, subDispY - 3, SUB_DW + 6, SUB_DH + 6, 4);
+  ctx.fill();
+  ctx.fillStyle = '#1a1500';
+  ctx.fillRect(subDispX, subDispY, SUB_DW, SUB_DH);
+  ctx.font = '7px monospace';
+  ctx.fillStyle = '#ff9900';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Sub (128x64)', subDispX + SUB_DW/2, subDispY + SUB_DH/2);
+
+  // ── Fine/Coarse LEDs + labels ──
+  drawLed(ctx, fineX, fineY, '#ff3333');
+  drawLed(ctx, fineX, coarseY, '#ff3333');
+  ctx.font = '6px sans-serif';
+  ctx.fillStyle = '#323232';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('fine', fineX - 7, fineY);
+  ctx.fillText('coarse', fineX - 7, coarseY);
+
+  // ── Dial/Sub buttons ──
+  drawButton(ctx, mb1X, sbY, BTN_W, BTN_H, true, '');
+  drawButton(ctx, mb2X, sbY, BTN_W, BTN_H, true, 'CANCEL');
+  drawButton(ctx, mb3X, sbY, BTN_W, BTN_H, true, 'ZERO', 'HOME');
+  drawButton(ctx, mb4X, sbY, BTN_W, BTN_H, false, 'S1');
+  drawButton(ctx, mb5X, sbY, BTN_W, BTN_H, false, 'S2');
+  drawButton(ctx, mb6X, sbY, BTN_W, BTN_H, false, 'S3', 'FOCUS');
+
+  // ── Storage/mode divider line ──
+  ctx.strokeStyle = '#a5a5a7';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(4, hbY - 6);
+  ctx.lineTo(leftEdge, hbY - 6);
+  ctx.stroke();
+
+  // ── Toggle switches ──
+  drawToggle(ctx, tStorageX, tStorageY, TOGGLE_W, TOGGLE_H, 'STORAGE', ['user', 'admin', 'eject']);
+  drawToggle(ctx, tModeX, tModeY, TOGGLE_W, TOGGLE_H, 'MODE', ['hold', 'edit', 'scope']);
+
+  // ── I/O and Safe LEDs ──
+  drawLed(ctx, ioLedX, ioLedY, '#ff3333');
+  drawLed(ctx, ioLedX, safeLedY, '#ff3333');
+  ctx.font = '6px sans-serif';
+  ctx.fillStyle = '#323232';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('I/O', ioLedX + 6, ioLedY);
+  ctx.fillText('safe', ioLedX + 6, safeLedY);
+
+  // ── Hard buttons (ENTER, UP, SHIFT) ──
+  drawButton(ctx, mb4X, hbY, BTN_W, BTN_H, true, 'ENTER', 'COMMIT');
+  drawButton(ctx, mb5X, hbY, BTN_W, BTN_H, true, 'UP');
+  drawButton(ctx, mb6X, hbY, BTN_W, BTN_H, true, 'SHIFT');
+
+  // ════════════════════════════════════════════════
+  // RIGHT SECTION
+  // ════════════════════════════════════════════════
+
+  // ── G/IN/OUT column headers ──
+  ctx.font = 'bold 8px sans-serif';
+  ctx.fillStyle = '#323232';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('G', j2X, j1Y - 18);
+  ctx.fillText('IN', j3X, j1Y - 18);
+  ctx.fillText('OUT', j4X, j1Y - 18);
+
+  // ── Dashed vertical dividers ──
+  ctx.strokeStyle = '#b0b0b2';
+  ctx.lineWidth = 0.5;
+  const dTop = j1Y - 14;
+  const dBot = j4Y + 16;
+  const divXs = [(j1X+j2X)/2, (j2X+j3X)/2, (j3X+j4X)/2];
+  for (const dx of divXs) {
+    for (let y = dTop; y < dBot; y += 5) {
+      ctx.beginPath();
+      ctx.moveTo(dx, y);
+      ctx.lineTo(dx, Math.min(y + 2.5, dBot));
+      ctx.stroke();
+    }
+  }
+
+  // ── Select buttons 1-4 (outlined) ──
+  const jYupper = [j1Y, j2Y, j3Y, j4Y];
+  for (let i = 0; i < 4; i++) {
+    drawOutlinedButton(ctx, selBtnX, jYupper[i] - BTN_H/2, BTN_W, BTN_H, String(i+1));
+  }
+
+  // ── G jacks (G1-G4) ──
+  for (let i = 0; i < 4; i++) drawJack(ctx, j2X, jYupper[i]);
+  // ── IN jacks (IN1-IN4) ──
+  for (let i = 0; i < 4; i++) drawJack(ctx, j3X, jYupper[i]);
+  // ── OUT jacks (OUT1-OUT4) ──
+  for (let i = 0; i < 4; i++) drawJack(ctx, j4X, jYupper[i]);
+
+  // ── Output LEDs (between IN and OUT) ──
+  for (let i = 0; i < 4; i++) {
+    drawLed(ctx, outLedX, jYupper[i], '#ffcc00');
+  }
+
+  // ── Link LEDs + labels ──
+  for (let i = 0; i < 3; i++) {
+    const ly = (jYupper[i] + jYupper[i+1]) / 2;
+    drawLed(ctx, outLedX, ly, '#ff3333', 3);
+    ctx.font = '5.5px sans-serif';
+    ctx.fillStyle = '#505050';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('linked', outLedX, ly + 4);
+  }
+
+  // ── ABCD section divider ──
+  ctx.strokeStyle = '#a5a5a7';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(j1X - 20, abcdDivY);
+  ctx.lineTo(PW - 4, abcdDivY);
+  ctx.stroke();
+
+  // ── ABCD column headers ──
+  ctx.font = 'bold 8px sans-serif';
+  ctx.fillStyle = '#323232';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('A', j1X, j5Y - 16);
+  ctx.fillText('B', j2X, j5Y - 16);
+  ctx.fillText('C', j3X, j5Y - 16);
+  ctx.fillText('D', j4X, j5Y - 16);
+
+  // ── ABCD CV jacks + row labels + LEDs ──
+  const cvJx = [j1X, j2X, j3X, j4X];
+  const cvJy = [j5Y, j6Y, j7Y];
+  for (let c = 0; c < 4; c++) {
+    for (let r = 0; r < 3; r++) {
+      drawJack(ctx, cvJx[c], cvJy[r]);
+      // CV LED
+      drawLed(ctx, cvJx[c] - 14, cvJy[r] - 14, '#33cc33', 2.5);
+    }
+  }
+
+  // Row labels (1, 2, 3) on left side of ABCD section
+  ctx.font = '7px sans-serif';
+  ctx.fillStyle = '#505050';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let r = 0; r < 3; r++) {
+    ctx.fillText(String(r+1), j1X - 18, cvJy[r]);
+  }
+
+  // ── Bottom specs ──
+  ctx.font = '5px sans-serif';
+  ctx.fillStyle = '#404040';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('G: 0-10V 96kHz 12bit', LM, PH - 4);
+  ctx.fillText('IN+ABCD: ±10V 60kHz 16bit', j1X - 10, PH - 4);
+  ctx.textAlign = 'right';
+  ctx.fillText('OUT: ±7V 96kHz 24bit', PW - RM, PH - 4);
+
+  // ── Debug: show column X positions ──
+  ctx.font = '5px monospace';
+  ctx.fillStyle = 'rgba(255,0,0,0.4)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(`sel=${Math.round(j1X)}`, j1X, PH - 14);
+  ctx.fillText(`G=${Math.round(j2X)}`, j2X, PH - 14);
+  ctx.fillText(`IN=${Math.round(j3X)}`, j3X, PH - 14);
+  ctx.fillText(`OUT=${Math.round(j4X)}`, j4X, PH - 14);
+
+  ctx.restore();
+}
+
+// ── Drawing helpers ──
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+function drawScrew(ctx, x, y) {
+  const cx = x + RACK_GRID_WIDTH/2, cy = y + RACK_GRID_WIDTH/2, r = 5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = '#c0c0c0';
+  ctx.fill();
+  ctx.strokeStyle = '#999';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx-2.5, cy); ctx.lineTo(cx+2.5, cy);
+  ctx.moveTo(cx, cy-2.5); ctx.lineTo(cx, cy+2.5);
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+}
+
+function drawButton(ctx, x, y, w, h, blue, label, pill) {
+  const r = 2;
+  ctx.fillStyle = blue ? '#325ab4' : '#4b4b4b';
+  roundRect(ctx, x, y, w, h, r);
+  ctx.fill();
+  ctx.fillStyle = blue ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.08)';
+  ctx.fillRect(x + 0.5, y + 0.5, w - 1, 1);
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.lineWidth = 0.75;
+  roundRect(ctx, x, y, w, h, r);
+  ctx.stroke();
+  if (label) {
+    ctx.font = '7px sans-serif';
+    ctx.fillStyle = '#282828';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(label, x + w/2, y - 2);
+  }
+  if (pill) {
+    ctx.font = '5.5px sans-serif';
+    const tw = ctx.measureText(pill).width;
+    const pw = tw + 5, ph = 8;
+    const px = x + w/2 - pw/2, py = y - 17;
+    roundRect(ctx, px, py, pw, ph, 3);
+    ctx.strokeStyle = '#606060';
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+    ctx.fillStyle = '#404040';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(pill, x + w/2, py + ph/2);
+  }
+}
+
+function drawOutlinedButton(ctx, x, y, w, h, label) {
+  roundRect(ctx, x + 1, y + 1, w - 2, h - 2, 2);
+  ctx.strokeStyle = '#5a5a5a';
+  ctx.lineWidth = 0.75;
+  ctx.stroke();
+  if (label) {
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = '#323232';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, x + w/2, y + h/2);
+  }
+}
+
+function drawJack(ctx, cx, cy) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, 11, 0, Math.PI * 2);
+  ctx.fillStyle = '#2a2a2a';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#111';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 11, 0, Math.PI * 2);
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+}
+
+function drawLed(ctx, cx, cy, color, r) {
+  r = r || 3.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.5;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth = 0.4;
+  ctx.stroke();
+}
+
+function drawToggle(ctx, x, y, w, h, title, labels) {
+  ctx.font = '7px sans-serif';
+  ctx.fillStyle = '#282828';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(title, x, y - 2);
+  const cx = x + 6;
+  const tH = h - 6, tTop = y + 3;
+  roundRect(ctx, cx - 4, tTop, 8, tH, 2);
+  ctx.fillStyle = '#1e1e1e';
+  ctx.fill();
+  const leverLen = tH * 0.45;
+  const leverCy = tTop + tH * 0.5;
+  const leverTop = leverCy - leverLen/2;
+  roundRect(ctx, cx - 2.5, leverTop, 5, leverLen, 2);
+  const lgr = ctx.createLinearGradient(cx-2.5, leverTop, cx+2.5, leverTop+leverLen);
+  lgr.addColorStop(0, '#d2d2d4');
+  lgr.addColorStop(1, '#a0a0a2');
+  ctx.fillStyle = lgr;
+  ctx.fill();
+  ctx.strokeStyle = '#646464';
+  ctx.lineWidth = 0.4;
+  roundRect(ctx, cx-2.5, leverTop, 5, leverLen, 2);
+  ctx.stroke();
+  const textX = x + 15;
+  const positions = [tTop + tH*0.22, tTop + tH*0.5, tTop + tH*0.78];
+  ctx.font = '6px sans-serif';
+  ctx.fillStyle = '#404040';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < 3; i++) ctx.fillText(labels[i], textX, positions[i]);
+}
+
+// Render
+drawPanel(document.getElementById('panel').getContext('2d'), 2);
+</script>
+</body>
+</html>
