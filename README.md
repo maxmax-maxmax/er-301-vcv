@@ -7,11 +7,15 @@ This is not a simplified emulation — it runs the actual ER-301 firmware with a
 ## Features
 
 - Full ER-301 engine running inside VCV Rack
-- Main display (256x64, 4-bit grayscale) and sub display (128x64, 1-bit mono) rendered via NanoVG
+- 30HP panel matching the physical module layout
+- Main display (256x64, 4-bit grayscale) and sub display (128x64, 1-bit mono) with amber tint, rendered via NanoVG
 - 20 inputs: 4 audio (IN1–IN4), 12 CV (A1–D3), 4 gate (G1–G4)
 - 4 outputs (OUT1–OUT4)
-- Interactive controls: 19 buttons, rotary encoder, 2 toggle switches, 11 LEDs
-- Audio bridge with 128-sample frame buffering between VCV and the ER-301 engine
+- Interactive controls: 19 buttons, rotary encoder, 2 toggle switches (STORAGE, MODE)
+- 11 LEDs: output levels, link indicators, fine/coarse, I/O, safe, and bicolor CV LEDs
+- Pill-shaped silkscreen labels (QUICKSAVE, FOCUS, HOME, COMMIT) matching the real panel
+- Outlined select buttons (1–4) with dashed column dividers between G/IN/OUT sections
+- Audio bridge with 128-sample frame buffering (~2.67ms latency at 48kHz)
 
 ## Prerequisites
 
@@ -62,6 +66,10 @@ The plugin replaces the ER-301's SDL-based emulator HAL with a VCV-native HAL la
 | File I/O | Filesystem | Filesystem (same) |
 
 The audio bridge accumulates VCV's sample-by-sample calls into 128-sample frames, then calls the ER-301 `Pump_callback()` synchronously. This introduces ~2.67ms latency at 48kHz.
+
+## Panel Preview
+
+Open `panel-preview.html` in a browser to see a 2x preview of the panel layout without needing to build or run VCV Rack. This is useful for iterating on visual design.
 
 ## Current Status
 
