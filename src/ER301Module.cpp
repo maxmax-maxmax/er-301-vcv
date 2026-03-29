@@ -746,17 +746,17 @@ struct ER301Widget : ModuleWidget
   static constexpr float SCREEN_TINT = 0.85f;
 
   // Display render sizes (scaled to fit 30HP; pixel buffers remain 256x64 / 128x64)
-  static constexpr float MAIN_DW = 234;
-  static constexpr float MAIN_DH = 58;
-  static constexpr float SUB_DW = 117;
-  static constexpr float SUB_DH = 58;
+  static constexpr float MAIN_DW = 210;
+  static constexpr float MAIN_DH = 56;
+  static constexpr float SUB_DW = 105;
+  static constexpr float SUB_DH = 56;
 
   // Button/UI sizes
-  static constexpr float BTN_W = 26;
-  static constexpr float BTN_H = 26;
-  static constexpr float TOGGLE_W = 38;
-  static constexpr float TOGGLE_H = 34;
-  static constexpr float J_HSPACING = 46;
+  static constexpr float BTN_W = 24;
+  static constexpr float BTN_H = 24;
+  static constexpr float TOGGLE_W = 36;
+  static constexpr float TOGGLE_H = 32;
+  static constexpr float KNOB_DIA = 80;
 
   // All positions stored as members for draw() access
   float panelW;
@@ -791,84 +791,64 @@ struct ER301Widget : ModuleWidget
     panelW = 30 * RACK_GRID_WIDTH;
     box.size = Vec(panelW, RACK_GRID_HEIGHT);
 
-    float LM = 10; // left margin
-    float RM = 10; // right margin
+    float LM = 10;  // left margin (synced from HTML preview)
     mainDispX = LM;
 
-    // Jack columns — fit 4 columns in right section
-    // Right section starts after display + gap
-    j1X = LM + MAIN_DW + 28;         // select btn column
-    j4X = panelW - RM - 12;          // OUT column (rightmost)
-    float jackSpan = j4X - j1X;      // total span for 3 gaps
-    float jHS = jackSpan / 3.0f;     // computed jack column spacing
-    j2X = j1X + jHS;                 // G column
-    j3X = j2X + jHS;                 // IN column
+    // Jack columns — 4 columns in right section
+    j1X = LM + MAIN_DW + 28;                  // 272 — select/A column
+    j4X = panelW - 10 - 12;                   // 435.2 — OUT/D column
+    float colSpan = j4X - j1X;
+    float colStep = colSpan / 3.0f;
+    j2X = j1X + colStep;                      // G/B column
+    j3X = j1X + 2 * colStep;                  // IN/C column
 
-    // ── LEFT PANEL vertical layout (all Y = top edge of element) ──
-    // Budget: 380px total
-    //   18  title area (screws + title text)
-    //   64  main display
-    //   20  gap (pills + M labels)
-    //   28  M buttons
-    //    8  gap
-    //   84  knob (smaller to fit)
-    //    4  gap
-    //   12  fine/coarse LEDs
-    //    6  gap (HOME pill + label)
-    //   28  dial/sub buttons
-    //   14  gap (COMMIT pill + label + divider)
-    //   28  hard buttons / toggles
-    //   28  toggle labels area
-    //   10  bottom specs
-    //  = 352 content + 28 padding = 380 ✓
-
-    mainDispY = 20;                    // Y=20..84
-    mbY = 104;                         // Y=104..132 (gap=20 for pills+labels)
+    // ── Vertical layout (VOS=14 applied) ──
+    mainDispY = 28;                            // 20+14-6
+    mbY = 118;                                 // 104+14
     knobX = LM;
-    knobY = 142;                       // Y=142..226 (knob 84px tall)
-    subDispX = LM + MAIN_DW / 2;
-    subDispY = knobY + (84 - SUB_DH) / 2; // centered in knob area
+    knobY = 158;                               // knob area top (for widget placement)
+    float knobH = 84;
+    subDispX = LM + MAIN_DW / 2;              // 127 — sub display center-aligned
+    subDispY = 200 - SUB_DH / 2;              // centered on knobCY=200
 
-    fineX = LM + 26;
-    fineY = 232;                       // Y=232
-    coarseY = 244;                     // Y=244
+    fineX = LM + 20;                          // fine LED x
+    fineY = 240;                               // 226+14
+    coarseY = fineY + 14;                      // coarse LED below fine
 
-    sbY = 256;                         // Y=256..284
-    hbY = 300;                         // Y=300..328
+    sbY = 274;                                 // 260+14 dial/sub button row
+    hbY = 330;                                 // 316+14 hard buttons/toggles row
 
-    tStorageX = LM - 1;
+    tStorageX = LM - 1;                        // 9
     tStorageY = hbY;
-    tModeX = LM + 2 * 42 - 1;
     tModeY = hbY;
 
-    ioLedX = tStorageX + TOGGLE_W + 10;
-    ioLedY = tStorageY + 10;
-    safeLedY = tStorageY + TOGGLE_H - 6;
+    ioLedX = tStorageX + TOGGLE_W + 28;        // I/O LED column (moved right)
+    ioLedY = tStorageY + 9;
+    safeLedY = tStorageY + 24;
 
-    // ── M button X positions (6 across 256px) ──
-    float gridStep = 42;
-    mb1X = LM + 7;
+    // ── M button X positions (6 evenly across display width) ──
+    float gridStep = (MAIN_DW - BTN_W) / 5.0f; // 41.6
+    mb1X = mainDispX;                          // first button at left edge of display
     mb2X = mb1X + gridStep;
     mb3X = mb2X + gridStep;
     mb4X = mb3X + gridStep;
     mb5X = mb4X + gridStep;
     mb6X = mb5X + gridStep;
 
-    // ── RIGHT PANEL vertical layout ──
-    // Upper: rows 1-4 for select/G/IN/OUT (Y=38..220, spacing=60)
-    j1Y = 40;
-    j2Y = 100;
-    j3Y = 160;
-    j4Y = 220;
+    tModeX = LM + 2 * gridStep - 1;
 
-    // ABCD divider at ~240
-    // Lower: rows 5-7 for ABCD (Y=262..348, spacing=43)
-    j5Y = 262;
-    j6Y = 305;
-    j7Y = 348;
+    // ── RIGHT PANEL vertical layout (VOS=14 applied) ──
+    j1Y = 54;                                  // 40+14
+    j2Y = 114;                                 // 100+14
+    j3Y = 174;                                 // 160+14
+    j4Y = 234;                                 // 220+14
+
+    j5Y = 278;                                 // 264+14
+    j6Y = 319;                                 // 305+14
+    j7Y = 360;                                 // 346+14
 
     selBtnX = j1X - BTN_W / 2;
-    outLedX = (LM + MAIN_DW + selBtnX) / 2;
+    outLedX = (LM + MAIN_DW + selBtnX) / 2;   // match HTML
 
     // ════════════════════════════════════════════════════════════════
     // WIDGETS
@@ -907,8 +887,8 @@ struct ER301Widget : ModuleWidget
     addChild(new ER301Button(BUTTON_SELECT3, Vec(selBtnX, j3Y - BTN_H / 2), Vec(BTN_W, BTN_H), false, "3", "", true));
     addChild(new ER301Button(BUTTON_SELECT4, Vec(selBtnX, j4Y - BTN_H / 2), Vec(BTN_W, BTN_H), false, "4", "", true));
 
-    // Encoder knob (84px tall to fit layout)
-    addChild(new ER301Knob(Vec(knobX, knobY), Vec(KNOB_W, 84)));
+    // Encoder knob
+    addChild(new ER301Knob(Vec(knobX, knobY), Vec(KNOB_DIA, knobH)));
 
     // Toggle switches
     addChild(new ER301Toggle(TOGGLE_STORAGE_A, TOGGLE_STORAGE_B,
@@ -1048,14 +1028,15 @@ struct ER301Widget : ModuleWidget
     nvgStrokeWidth(vg, 0.75f);
     nvgStroke(vg);
 
-    // ── Title ──
+    // ── Title (centered over display area) ──
+    float titleCx = mainDispX + MAIN_DW / 2;
     nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-    nvgFontSize(vg, 14);
+    nvgFontSize(vg, 12);
     nvgFillColor(vg, nvgRGB(30, 30, 30));
-    nvgText(vg, pw / 2 - 40, 12, "ER-301", NULL);
-    nvgFontSize(vg, 9.5f);
-    nvgFillColor(vg, nvgRGB(60, 60, 60));
-    nvgText(vg, pw / 2 + 55, 12, "SOUND COMPUTER", NULL);
+    nvgText(vg, titleCx - 30, 12, "ER-301", NULL);
+    nvgFontSize(vg, 8);
+    nvgFillColor(vg, nvgRGB(80, 80, 80));
+    nvgText(vg, titleCx + 50, 12, "SOUND COMPUTER", NULL);
 
     // ── Main Display bezel ──
     nvgBeginPath(vg);
@@ -1104,92 +1085,128 @@ struct ER301Widget : ModuleWidget
       }
     }
 
-    // ── Fine/Coarse labels ──
-    nvgFontSize(vg, 6.5f);
-    nvgFillColor(vg, nvgRGB(50, 50, 50));
-    nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-    nvgText(vg, fineX - 7, fineY, "fine", NULL);
-    nvgText(vg, fineX - 7, coarseY, "coarse", NULL);
+    // ── Fine/Coarse labels (with underlines) ──
+    {
+      float fcX = mainDispX - 4;
+      float fcY = fineY;
+      nvgFontSize(vg, 7.5f);
+      nvgFillColor(vg, nvgRGB(30, 30, 30));
+      nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE);
+      // fine
+      nvgText(vg, fcX, fcY, "fine", NULL);
+      float fineW = nvgTextBounds(vg, 0, 0, "fine", NULL, NULL);
+      nvgBeginPath(vg);
+      nvgMoveTo(vg, fcX, fcY + 1.5f);
+      nvgLineTo(vg, fcX + fineW, fcY + 1.5f);
+      nvgStrokeColor(vg, nvgRGB(30, 30, 30));
+      nvgStrokeWidth(vg, 0.7f);
+      nvgStroke(vg);
+      // arrow below fine
+      nvgFontSize(vg, 9.0f);
+      nvgText(vg, fcX + 4, fcY + 10, "\xe2\x86\x95", NULL);
+      // coarse (offset right beside arrow)
+      nvgFontSize(vg, 7.5f);
+      nvgText(vg, fcX + 12, fcY + 14, "coarse", NULL);
+      float coarseW = nvgTextBounds(vg, 0, 0, "coarse", NULL, NULL);
+      nvgBeginPath(vg);
+      nvgMoveTo(vg, fcX + 12, fcY + 15.5f);
+      nvgLineTo(vg, fcX + 12 + coarseW, fcY + 15.5f);
+      nvgStroke(vg);
+      // arrow below coarse
+      nvgFontSize(vg, 9.0f);
+      nvgText(vg, fcX + 16, fcY + 24, "\xe2\x86\x94", NULL);
+    }
 
-    // ── I/O and Safe labels ──
+    // ── I/O and Safe labels (above LEDs) ──
     nvgFontSize(vg, 6.5f);
-    nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-    nvgText(vg, ioLedX + 7, ioLedY, "I/O", NULL);
-    nvgText(vg, ioLedX + 7, safeLedY, "safe", NULL);
-
-    // ── Storage/mode divider line ──
-    nvgStrokeColor(vg, nvgRGB(165, 165, 167));
-    nvgStrokeWidth(vg, 0.5f);
-    nvgBeginPath(vg);
-    nvgMoveTo(vg, 4, hbY - 8);
-    nvgLineTo(vg, mainDispX + MAIN_DW, hbY - 8);
-    nvgStroke(vg);
+    nvgFillColor(vg, nvgRGB(30, 30, 30));
+    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
+    nvgText(vg, ioLedX, ioLedY - 5, "I/O", NULL);
+    nvgText(vg, ioLedX, safeLedY - 5, "safe", NULL);
 
     // ── G/IN/OUT column headers ──
-    nvgFontSize(vg, 9);
+    nvgFontSize(vg, 8);
     nvgFillColor(vg, nvgRGB(50, 50, 50));
     nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
-    nvgText(vg, j2X, j1Y - 20, "G", NULL);
-    nvgText(vg, j3X, j1Y - 20, "IN", NULL);
-    nvgText(vg, j4X, j1Y - 20, "OUT", NULL);
+    nvgText(vg, j2X, j1Y - 18, "G", NULL);
+    nvgText(vg, j3X, j1Y - 18, "IN", NULL);
+    nvgText(vg, j4X, j1Y - 18, "OUT", NULL);
 
     // ── Dashed vertical dividers between jack columns ──
     {
-      float dTop = j1Y - 16;
-      float dBot = j4Y + 18;
+      float dTop = j1Y - 14;
+      float dBot = j4Y + 16;
       float dxs[] = {(j1X + j2X) / 2, (j2X + j3X) / 2, (j3X + j4X) / 2};
-      nvgStrokeColor(vg, nvgRGB(165, 165, 167));
+      nvgStrokeColor(vg, nvgRGB(176, 176, 178));
       nvgStrokeWidth(vg, 0.5f);
       for (int d = 0; d < 3; d++)
-        for (float y = dTop; y < dBot; y += 6)
+        for (float y = dTop; y < dBot; y += 5)
         {
           nvgBeginPath(vg);
           nvgMoveTo(vg, dxs[d], y);
-          nvgLineTo(vg, dxs[d], std::min(y + 3.0f, dBot));
+          nvgLineTo(vg, dxs[d], std::min(y + 2.5f, dBot));
           nvgStroke(vg);
         }
     }
 
     // ── "linked" labels ──
-    nvgFontSize(vg, 6.5f);
-    nvgFillColor(vg, nvgRGB(60, 60, 60));
-    nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-    nvgText(vg, outLedX + 7, (j1Y + j2Y) / 2, "linked", NULL);
-    nvgText(vg, outLedX + 7, (j2Y + j3Y) / 2, "linked", NULL);
-    nvgText(vg, outLedX + 7, (j3Y + j4Y) / 2, "linked", NULL);
+    nvgFontSize(vg, 5.5f);
+    nvgFillColor(vg, nvgRGB(80, 80, 80));
+    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_TOP);
+    nvgText(vg, outLedX, (j1Y + j2Y) / 2 + 4, "linked", NULL);
+    nvgText(vg, outLedX, (j2Y + j3Y) / 2 + 4, "linked", NULL);
+    nvgText(vg, outLedX, (j3Y + j4Y) / 2 + 4, "linked", NULL);
 
     // ── ABCD section divider ──
     float abcdDivY = (j4Y + j5Y) / 2;
     nvgStrokeColor(vg, nvgRGB(165, 165, 167));
     nvgStrokeWidth(vg, 0.5f);
     nvgBeginPath(vg);
-    nvgMoveTo(vg, j1X - 28, abcdDivY);
+    nvgMoveTo(vg, j1X - 20, abcdDivY);
     nvgLineTo(vg, pw - 4, abcdDivY);
     nvgStroke(vg);
 
-    // ── CV jack labels (A1-D3) ──
-    nvgFontSize(vg, 8);
-    nvgFillColor(vg, nvgRGB(60, 60, 60));
-    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
-    const char *cols[] = {"A", "B", "C", "D"};
-    float jxA[] = {j1X, j2X, j3X, j4X};
-    float jyA[] = {j5Y, j6Y, j7Y};
-    for (int c = 0; c < 4; c++)
-      for (int r = 0; r < 3; r++)
-      {
-        char lbl[4];
-        snprintf(lbl, sizeof(lbl), "%s%d", cols[c], r + 1);
-        nvgText(vg, jxA[c], jyA[r] - 14, lbl, NULL);
-      }
+    // ── ABCD jack labels (A1-D3 above each jack) ──
+    {
+      const char *cols[] = {"A", "B", "C", "D"};
+      float cvJx[] = {j1X, j2X, j3X, j4X};
+      float cvJy[] = {j5Y, j6Y, j7Y};
+      nvgFontSize(vg, 8);
+      nvgFillColor(vg, nvgRGB(42, 42, 42));
+      nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
+      for (int c = 0; c < 4; c++)
+        for (int r = 0; r < 3; r++)
+        {
+          char lbl[4];
+          snprintf(lbl, sizeof(lbl), "%s%d", cols[c], r + 1);
+          nvgText(vg, cvJx[c], cvJy[r] - 14, lbl, NULL);
+        }
+    }
+
+    // ── Dashed vertical dividers (ABCD section) ──
+    {
+      float abcdBot = j7Y + 16;
+      float dxs[] = {(j1X + j2X) / 2, (j2X + j3X) / 2, (j3X + j4X) / 2};
+      nvgStrokeColor(vg, nvgRGB(165, 165, 167));
+      nvgStrokeWidth(vg, 0.5f);
+      for (int d = 0; d < 3; d++)
+        for (float y = abcdDivY + 4; y < abcdBot; y += 6)
+        {
+          nvgBeginPath(vg);
+          nvgMoveTo(vg, dxs[d], y);
+          nvgLineTo(vg, dxs[d], std::min(y + 3.0f, abcdBot));
+          nvgStroke(vg);
+        }
+    }
 
     // ── Bottom specs ──
-    nvgFontSize(vg, 5.5f);
-    nvgFillColor(vg, nvgRGB(40, 40, 40));
+    nvgFontSize(vg, 5.0f);
+    nvgFillColor(vg, nvgRGB(64, 64, 64));
     nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-    nvgText(vg, mainDispX, ph - 5, "G: 0V-10V | Fs: 96kHz | 12-bit", NULL);
-    nvgText(vg, (j1X + j2X) / 2, ph - 5, "IN+ABCD: -10V-10V | Fs: 60kHz | 16-bit", NULL);
+    nvgText(vg, mainDispX, ph - 4, "G: 0-10V 96kHz 12bit", NULL);
+    nvgText(vg, j1X - 10, ph - 4, "IN+ABCD: " "\xc2\xb1" "10V 60kHz 16bit", NULL);
     nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
-    nvgText(vg, pw - 16, ph - 5, "OUT: -7V-7V | Fs: 96kHz | 24-bit", NULL);
+    nvgText(vg, pw - 6, ph - 4, "OUT: " "\xc2\xb1" "7V 96kHz 24bit", NULL);
 
     ModuleWidget::draw(args);
   }
