@@ -590,16 +590,18 @@ struct ER301Toggle : OpaqueWidget
       nvgText(vg, 0, -3, label.c_str(), NULL);
     }
 
-    // Toggle body - vertical metal toggle like 4ms/standard VCV
+    // Toggle body
     float cx = 7;
     float toggleH = box.size.y - 8;
     float toggleTop = 4;
 
-    // Base plate
+    // Thin slot line (no dark rectangle)
     nvgBeginPath(vg);
-    nvgRoundedRect(vg, cx - 5, toggleTop, 10, toggleH, 2);
-    nvgFillColor(vg, nvgRGB(30, 30, 30));
-    nvgFill(vg);
+    nvgMoveTo(vg, cx, toggleTop + 2);
+    nvgLineTo(vg, cx, toggleTop + toggleH - 2);
+    nvgStrokeColor(vg, nvgRGB(136, 136, 136));
+    nvgStrokeWidth(vg, 1.0f);
+    nvgStroke(vg);
 
     // Lever
     float leverLen = toggleH * 0.45f;
@@ -622,8 +624,8 @@ struct ER301Toggle : OpaqueWidget
     nvgStrokeWidth(vg, 0.5f);
     nvgStroke(vg);
 
-    // Position labels with arrows
-    float textX = 17;
+    // Position labels
+    float textX = 13;
     float positions[] = {toggleTop + toggleH * 0.22f, toggleTop + toggleH * 0.5f, toggleTop + toggleH * 0.78f};
     for (int i = 0; i < 3; i++)
     {
@@ -811,9 +813,10 @@ struct ER301Widget : ModuleWidget
     subDispX = LM + MAIN_DW / 2;              // 127 — sub display center-aligned
     subDispY = 200 - SUB_DH / 2;              // centered on knobCY=200
 
-    fineX = LM + 20;                          // fine LED x
-    fineY = 240;                               // 226+14
-    coarseY = fineY + 14;                      // coarse LED below fine
+    // Fine/coarse LED positions (matching HTML: fcX=mainDispX-4, LED offset from text)
+    fineX = mainDispX - 4 + 26;               // fcX + fineW(~24) + 6 = approx
+    fineY = 240 - 3;                           // fcY - 3 (LED beside "fine" text)
+    coarseY = 240 + 11;                        // fcY + 11 (LED beside "coarse" text)
 
     sbY = 274;                                 // 260+14 dial/sub button row
     hbY = 330;                                 // 316+14 hard buttons/toggles row
@@ -1199,14 +1202,7 @@ struct ER301Widget : ModuleWidget
         }
     }
 
-    // ── Bottom specs ──
-    nvgFontSize(vg, 5.0f);
-    nvgFillColor(vg, nvgRGB(64, 64, 64));
-    nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-    nvgText(vg, mainDispX, ph - 4, "G: 0-10V 96kHz 12bit", NULL);
-    nvgText(vg, j1X - 10, ph - 4, "IN+ABCD: " "\xc2\xb1" "10V 60kHz 16bit", NULL);
-    nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
-    nvgText(vg, pw - 6, ph - 4, "OUT: " "\xc2\xb1" "7V 96kHz 24bit", NULL);
+    // ── Bottom specs (disabled for now) ──
 
     ModuleWidget::draw(args);
   }
