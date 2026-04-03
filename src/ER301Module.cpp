@@ -375,18 +375,14 @@ struct ER301Module : Module
 // Forward declarations for encoder HAL
 void VCV_addEncoderDelta(int delta);
 
-// ─── Clickable button overlay widget ───
+// ─── Transparent button overlay (PNG provides visuals) ───
 struct ER301Button : OpaqueWidget
 {
   uint32_t gpioId;
-  bool isBlue;
-  bool isOutlined; // outlined style for select buttons (like real panel)
-  std::string topLabel;  // label above button (M1, CANCEL, etc.)
-  std::string botLabel;  // label below top label (QUICKSAVE, etc.)
   bool pressed = false;
 
-  ER301Button(uint32_t id, Vec pos, Vec size, bool blue, const char *top = "", const char *bot = "", bool outlined = false)
-      : gpioId(id), isBlue(blue), isOutlined(outlined), topLabel(top), botLabel(bot)
+  ER301Button(uint32_t id, Vec pos, Vec size)
+      : gpioId(id)
   {
     box.pos = pos;
     box.size = size;
@@ -422,127 +418,28 @@ struct ER301Button : OpaqueWidget
 
   void draw(const DrawArgs &args) override
   {
-    NVGcontext *vg = args.vg;
-    float w = box.size.x;
-    float h = box.size.y;
-    float r = 2.0f;
-
-    if (isOutlined)
+    // Transparent — only show press feedback
+    if (pressed)
     {
-      // Outlined select button (like real panel silkscreen)
-      if (pressed)
-      {
-        nvgBeginPath(vg);
-        nvgRoundedRect(vg, 0, 0, w, h, r);
-        nvgFillColor(vg, nvgRGBA(0, 0, 0, 25));
-        nvgFill(vg);
-      }
-
-      // Thin border
+      NVGcontext *vg = args.vg;
       nvgBeginPath(vg);
-      nvgRoundedRect(vg, 1, 1, w - 2, h - 2, r);
-      nvgStrokeColor(vg, nvgRGB(90, 90, 90));
-      nvgStrokeWidth(vg, 0.75f);
-      nvgStroke(vg);
-
-      // Number inside the button
-      if (!topLabel.empty())
-      {
-        nvgFontSize(vg, 11);
-        nvgFillColor(vg, nvgRGB(50, 50, 50));
-        nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-        nvgText(vg, w / 2, h / 2, topLabel.c_str(), NULL);
-      }
-      return; // skip normal label drawing for outlined buttons
-    }
-    else
-    {
-      // Dark, minimal button style for VCV Rack aesthetic
-      NVGcolor face;
-      if (isBlue)
-        face = pressed ? nvgRGB(35, 65, 140) : nvgRGB(50, 90, 180);
-      else
-        face = pressed ? nvgRGB(55, 55, 55) : nvgRGB(75, 75, 75);
-
-      nvgBeginPath(vg);
-      nvgRoundedRect(vg, 0, 0, w, h, r);
-      nvgFillColor(vg, face);
+      nvgRoundedRect(vg, 0, 0, box.size.x, box.size.y, 2);
+      nvgFillColor(vg, nvgRGBA(255, 255, 255, 40));
       nvgFill(vg);
-
-      // Subtle top highlight
-      if (!pressed)
-      {
-        nvgBeginPath(vg);
-        nvgRoundedRect(vg, 0.5f, 0.5f, w - 1, 1, r);
-        nvgFillColor(vg, nvgRGBA(255, 255, 255, isBlue ? 40 : 30));
-        nvgFill(vg);
-      }
-
-      // Border
-      nvgBeginPath(vg);
-      nvgRoundedRect(vg, 0, 0, w, h, r);
-      nvgStrokeColor(vg, nvgRGBA(0, 0, 0, 80));
-      nvgStrokeWidth(vg, 0.75f);
-      nvgStroke(vg);
-    }
-
-    // Top label above button
-    if (!topLabel.empty())
-    {
-      nvgFontSize(vg, 8);
-      nvgFillColor(vg, nvgRGB(40, 40, 40));
-      nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
-      nvgText(vg, w / 2, -2, topLabel.c_str(), NULL);
-    }
-    if (!botLabel.empty())
-    {
-      // Draw pill-shaped background (like real panel silkscreen)
-      nvgFontSize(vg, 6.0f);
-      float bounds[4];
-      nvgTextBounds(vg, w / 2, -14, botLabel.c_str(), NULL, bounds);
-      float tw = bounds[2] - bounds[0];
-      float pillW = tw + 6;
-      float pillH = 9;
-      float pillX = w / 2 - pillW / 2;
-      float pillY = -19;
-      nvgBeginPath(vg);
-      nvgRoundedRect(vg, pillX, pillY, pillW, pillH, 3);
-      nvgStrokeColor(vg, nvgRGB(80, 80, 80));
-      nvgStrokeWidth(vg, 0.75f);
-      nvgStroke(vg);
-
-      nvgFillColor(vg, nvgRGB(60, 60, 60));
-      nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-      nvgText(vg, w / 2, pillY + pillH / 2, botLabel.c_str(), NULL);
     }
   }
 };
 
-// ─── Toggle switch widget (3-position metal toggle) ───
+// ─── Toggle switch overlay (3-position, transparent) ───
 struct ER301Toggle : OpaqueWidget
 {
   uint32_t idA, idB;
-  std::string label;
-  const char *labels[3]; // up, mid, down
 
-  ER301Toggle(uint32_t a, uint32_t b, Vec pos, Vec size,
-              const char *lbl, const char *up, const char *mid, const char *dn)
-      : idA(a), idB(b), label(lbl)
+  ER301Toggle(uint32_t a, uint32_t b, Vec pos, Vec size)
+      : idA(a), idB(b)
   {
     box.pos = pos;
     box.size = size;
-    labels[0] = up;
-    labels[1] = mid;
-    labels[2] = dn;
-  }
-
-  int getState()
-  {
-    if (Gpio_read(idA))
-      return 0;
-    if (Gpio_read(idB))
-      return 2;
-    return 1;
   }
 
   void setState(int s)
@@ -578,69 +475,13 @@ struct ER301Toggle : OpaqueWidget
 
   void draw(const DrawArgs &args) override
   {
-    NVGcontext *vg = args.vg;
-    int state = getState();
-
-    // Title above (like real panel: "STORAGE", "MODE")
-    if (!label.empty())
-    {
-      nvgFontSize(vg, 8);
-      nvgFillColor(vg, nvgRGB(40, 40, 40));
-      nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-      nvgText(vg, 0, -3, label.c_str(), NULL);
-    }
-
-    // Toggle body
-    float cx = 7;
-    float toggleH = box.size.y - 8;
-    float toggleTop = 4;
-
-    // Thin slot line (no dark rectangle)
-    nvgBeginPath(vg);
-    nvgMoveTo(vg, cx, toggleTop + 2);
-    nvgLineTo(vg, cx, toggleTop + toggleH - 2);
-    nvgStrokeColor(vg, nvgRGB(136, 136, 136));
-    nvgStrokeWidth(vg, 1.0f);
-    nvgStroke(vg);
-
-    // Lever
-    float leverLen = toggleH * 0.45f;
-    float leverCy;
-    if (state == 0)
-      leverCy = toggleTop + toggleH * 0.22f;
-    else if (state == 2)
-      leverCy = toggleTop + toggleH * 0.78f;
-    else
-      leverCy = toggleTop + toggleH * 0.5f;
-
-    float leverTop = leverCy - leverLen / 2;
-    nvgBeginPath(vg);
-    nvgRoundedRect(vg, cx - 3, leverTop, 6, leverLen, 2);
-    NVGpaint metalGrad = nvgLinearGradient(vg, cx - 3, leverTop, cx + 3, leverTop + leverLen,
-                                           nvgRGB(210, 210, 212), nvgRGB(160, 160, 162));
-    nvgFillPaint(vg, metalGrad);
-    nvgFill(vg);
-    nvgStrokeColor(vg, nvgRGB(100, 100, 100));
-    nvgStrokeWidth(vg, 0.5f);
-    nvgStroke(vg);
-
-    // Position labels
-    float textX = 13;
-    float positions[] = {toggleTop + toggleH * 0.22f, toggleTop + toggleH * 0.5f, toggleTop + toggleH * 0.78f};
-    for (int i = 0; i < 3; i++)
-    {
-      nvgFontSize(vg, 7);
-      nvgFillColor(vg, nvgRGB(50, 50, 50));
-      nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-      nvgText(vg, textX, positions[i], labels[i], NULL);
-    }
+    // Transparent — PNG provides the visual
   }
 };
 
-// ─── Encoder knob widget ───
+// ─── Encoder knob overlay (transparent, handles drag/scroll) ───
 struct ER301Knob : OpaqueWidget
 {
-  float dragY = 0;
   bool dragging = false;
 
   ER301Knob(Vec pos, Vec size)
@@ -656,7 +497,6 @@ struct ER301Knob : OpaqueWidget
       if (e.action == GLFW_PRESS)
       {
         dragging = true;
-        dragY = APP->scene->rack->getMousePos().y;
         e.consume(this);
       }
       else if (e.action == GLFW_RELEASE)
@@ -687,53 +527,7 @@ struct ER301Knob : OpaqueWidget
 
   void draw(const DrawArgs &args) override
   {
-    NVGcontext *vg = args.vg;
-    float cx = box.size.x / 2;
-    float cy = box.size.y / 2;
-    float r = std::min(cx, cy) - 4;
-
-    // Shadow
-    nvgBeginPath(vg);
-    nvgCircle(vg, cx + 2, cy + 2, r + 1);
-    nvgFillColor(vg, nvgRGBA(0, 0, 0, 50));
-    nvgFill(vg);
-
-    // Knob body - dark with subtle gradient
-    NVGpaint knobGrad = nvgRadialGradient(vg, cx - r * 0.3f, cy - r * 0.3f, 0, r * 2,
-                                          nvgRGB(50, 50, 50), nvgRGB(15, 15, 15));
-    nvgBeginPath(vg);
-    nvgCircle(vg, cx, cy, r);
-    nvgFillPaint(vg, knobGrad);
-    nvgFill(vg);
-
-    // Outer ring
-    nvgBeginPath(vg);
-    nvgCircle(vg, cx, cy, r);
-    nvgStrokeColor(vg, nvgRGB(5, 5, 5));
-    nvgStrokeWidth(vg, 2.0f);
-    nvgStroke(vg);
-
-    // Grip notches (like rubber ridges on real knob)
-    for (int i = 0; i < 20; i++)
-    {
-      float angle = i * 18.0f * (float)M_PI / 180.0f;
-      float x1 = cx + (r - 4) * cosf(angle);
-      float y1 = cy + (r - 4) * sinf(angle);
-      float x2 = cx + (r - 1) * cosf(angle);
-      float y2 = cy + (r - 1) * sinf(angle);
-      nvgBeginPath(vg);
-      nvgMoveTo(vg, x1, y1);
-      nvgLineTo(vg, x2, y2);
-      nvgStrokeColor(vg, nvgRGB(40, 40, 40));
-      nvgStrokeWidth(vg, 2.0f);
-      nvgStroke(vg);
-    }
-
-    // Center cap
-    nvgBeginPath(vg);
-    nvgCircle(vg, cx, cy, r * 0.35f);
-    nvgFillColor(vg, nvgRGB(25, 25, 25));
-    nvgFill(vg);
+    // Transparent — PNG provides the visual
   }
 };
 
@@ -741,40 +535,60 @@ struct ER301Widget : ModuleWidget
 {
   int mainImage = -1;
   int subImage = -1;
+  int panelImage = -1;
   uint8_t mainPixels[MAIN_HORIZONTAL_PIXELS * MAIN_VERTICAL_PIXELS * 4];
   uint8_t subPixels[SUB_HORIZONTAL_PIXELS * SUB_VERTICAL_PIXELS * 4];
 
   static constexpr int SCREEN_BRIGHTNESS = 15;
   static constexpr float SCREEN_TINT = 0.85f;
 
-  // Display render sizes (scaled to fit 30HP; pixel buffers remain 256x64 / 128x64)
-  static constexpr float MAIN_DW = 210;
-  static constexpr float MAIN_DH = 56;
-  static constexpr float SUB_DW = 105;
-  static constexpr float SUB_DH = 56;
+  // ════════════════════════════════════════════════════════════════
+  // All positions mapped from Panel.png (2246x1888 → 457.2x380)
+  // Image scale: sx = 457.2/2246 = 0.20356, sy = 380/1888 = 0.20127
+  // ════════════════════════════════════════════════════════════════
 
-  // Button/UI sizes
-  static constexpr float BTN_W = 24;
-  static constexpr float BTN_H = 24;
+  float panelW;
+
+  // Display positions and sizes (where to render pixel buffers on top of PNG)
+  float mainDispX, mainDispY, mainDispW, mainDispH;
+  float subDispX, subDispY, subDispW, subDispH;
+
+  // Button positions (center X, top-left Y for widget placement)
+  float mbX[6]; // M1-M6 / sub buttons X positions (center)
+  float mbY;    // M button row Y (center)
+  float sbY;    // Sub/dial button row Y (center)
+  float hbY;    // Hard button row Y (center)
+
+  // Button size
+  static constexpr float BTN_W = 22;
+  static constexpr float BTN_H = 22;
+
+  // Knob
+  float knobCX, knobCY, knobR;
+
+  // Jack positions (centers)
+  float jGX, jINX, jOUTX;           // Upper section: G, IN, OUT columns
+  float jUpperY[4];                  // Upper section: rows 1-4
+  float jAX, jBX, jCX, jDX;         // ABCD columns
+  float jABCDY[3];                   // ABCD rows 1-3
+
+  // Select button column
+  float selBtnX;
+
+  // Output/link LED X
+  float outLedX;
+
+  // Toggle positions
+  float tStorageX, tStorageY;
+  float tModeX, tModeY;
   static constexpr float TOGGLE_W = 36;
   static constexpr float TOGGLE_H = 32;
-  static constexpr float KNOB_DIA = 80;
 
-  // All positions stored as members for draw() access
-  float panelW;
-  float mainDispX, mainDispY;
-  float mb1X, mb2X, mb3X, mb4X, mb5X, mb6X, mbY;
-  float knobX, knobY;
-  float subDispX, subDispY;
+  // Fine/coarse LED positions
   float fineX, fineY, coarseY;
-  float sbY; // dial/sub button row Y
-  float hbY; // hard button row Y
-  float tStorageX, tStorageY, tModeX, tModeY;
+
+  // I/O and safe LED positions
   float ioLedX, ioLedY, safeLedY;
-  float j1X, j2X, j3X, j4X;
-  float j1Y, j2Y, j3Y, j4Y, j5Y, j6Y, j7Y;
-  float selBtnX;
-  float outLedX;
 
   ER301Widget(ER301Module *module)
   {
@@ -783,123 +597,126 @@ struct ER301Widget : ModuleWidget
     memset(subPixels, 0, sizeof(subPixels));
 
     // ════════════════════════════════════════════════════════════════
-    // PANEL LAYOUT — Panel is 380px tall.
-    // Mapped from real ER-301 photo proportions.
-    // Left section: displays, buttons, knob, toggles (~272px wide)
-    // Right section: jacks in columns (~240px wide)
+    // PANEL LAYOUT — All positions mapped from Panel.png analysis
+    // PNG is 2246x1888, rendered at 457.2x380 (30HP)
     // ════════════════════════════════════════════════════════════════
 
-    // 30HP panel = 457.2px wide
-    panelW = 30 * RACK_GRID_WIDTH;
+    panelW = 30 * RACK_GRID_WIDTH; // 457.2
     box.size = Vec(panelW, RACK_GRID_HEIGHT);
 
-    float LM = 10;  // left margin (synced from HTML preview)
-    mainDispX = LM;
+    // ── M button X centers (from image scan at button row) ──
+    mbX[0] = 26.8f;   // M1
+    mbX[1] = 69.8f;   // M2
+    mbX[2] = 113.3f;  // M3
+    mbX[3] = 156.6f;  // M4
+    mbX[4] = 200.1f;  // M5
+    mbX[5] = 243.5f;  // M6
 
-    // Jack columns — 4 columns in right section
-    j1X = LM + MAIN_DW + 28;                  // 272 — select/A column
-    j4X = panelW - 10 - 12;                   // 435.2 — OUT/D column
-    float colSpan = j4X - j1X;
-    float colStep = colSpan / 3.0f;
-    j2X = j1X + colStep;                      // G/B column
-    j3X = j1X + 2 * colStep;                  // IN/C column
+    // ── Button row Y centers ──
+    mbY  = 147.0f;
+    sbY  = 290.5f;
+    hbY  = 338.0f;
 
-    // ── Vertical layout (VOS=14 applied) ──
-    mainDispY = 28;                            // 20+14-6
-    mbY = 118;                                 // 104+14
-    knobX = LM;
-    knobY = 158;                               // knob area top (for widget placement)
-    float knobH = 84;
-    subDispX = LM + MAIN_DW / 2;              // 127 — sub display center-aligned
-    subDispY = 200 - SUB_DH / 2;              // centered on knobCY=200
+    // ── Knob ──
+    knobCX = 84.0f;
+    knobCY = 213.0f;
+    knobR  = 32.0f;
 
-    // Fine/coarse LED positions (matching HTML: fcX=mainDispX-4, LED offset from text)
-    fineX = mainDispX - 4 + 26;               // fcX + fineW(~24) + 6 = approx
-    fineY = 240 - 3;                           // fcY - 3 (LED beside "fine" text)
-    coarseY = 240 + 11;                        // fcY + 11 (LED beside "coarse" text)
+    // ── Displays (inner screen area within PNG bezel) ──
+    mainDispX = 20.0f;
+    mainDispY = 50.0f;
+    mainDispW = 230.0f;
+    mainDispH = 42.0f;
 
-    sbY = 274;                                 // 260+14 dial/sub button row
-    hbY = 330;                                 // 316+14 hard buttons/toggles row
+    subDispX = 128.0f;
+    subDispY = 194.0f;
+    subDispW = 120.0f;
+    subDispH = 48.0f;
 
-    tStorageX = LM - 1;                        // 9
-    tStorageY = hbY;
-    tModeY = hbY;
+    // ── Jack columns (upper section: G, IN, OUT) ──
+    jGX   = 350.5f;
+    jINX  = 393.9f;
+    jOUTX = 436.8f;
 
-    ioLedX = tStorageX + TOGGLE_W + 28;        // I/O LED column (moved right)
+    // ── Jack rows (upper section) ──
+    jUpperY[0] = 50.0f;   // Row 1
+    jUpperY[1] = 97.5f;   // Row 2
+    jUpperY[2] = 145.4f;  // Row 3
+    jUpperY[3] = 193.2f;  // Row 4
+
+    // ── ABCD jack columns ──
+    jAX = 307.0f;
+    jBX = 350.5f;
+    jCX = 393.5f;
+    jDX = 436.7f;
+
+    // ── ABCD jack rows ──
+    jABCDY[0] = 241.5f;   // Row 1
+    jABCDY[1] = 290.1f;   // Row 2
+    jABCDY[2] = 337.8f;   // Row 3
+
+    // ── Select buttons (left of G column) ──
+    selBtnX = 256.0f;
+
+    // ── Output/link LEDs ──
+    outLedX = 275.0f;
+
+    // ── Toggle switches ──
+    tStorageX = 8.0f;
+    tStorageY = hbY - 16.0f;
+    tModeX = 90.0f;
+    tModeY = tStorageY;
+
+    // ── Fine/coarse LEDs ──
+    fineX = 30.0f;
+    fineY = 253.0f;
+    coarseY = 265.0f;
+
+    // ── I/O and safe LEDs ──
+    ioLedX = 74.0f;
     ioLedY = tStorageY + 9;
     safeLedY = tStorageY + 24;
 
-    // ── M button X positions (6 evenly across display width) ──
-    float gridStep = (MAIN_DW - BTN_W) / 5.0f; // 41.6
-    mb1X = mainDispX;                          // first button at left edge of display
-    mb2X = mb1X + gridStep;
-    mb3X = mb2X + gridStep;
-    mb4X = mb3X + gridStep;
-    mb5X = mb4X + gridStep;
-    mb6X = mb5X + gridStep;
-
-    tModeX = LM + 2 * gridStep - 1;
-
-    // ── RIGHT PANEL vertical layout (VOS=14 applied) ──
-    j1Y = 54;                                  // 40+14
-    j2Y = 114;                                 // 100+14
-    j3Y = 174;                                 // 160+14
-    j4Y = 234;                                 // 220+14
-
-    j5Y = 278;                                 // 264+14
-    j6Y = 319;                                 // 305+14
-    j7Y = 360;                                 // 346+14
-
-    selBtnX = j1X - BTN_W / 2;
-    outLedX = (LM + MAIN_DW + selBtnX) / 2;   // match HTML
-
     // ════════════════════════════════════════════════════════════════
-    // WIDGETS
+    // WIDGETS — transparent overlays on top of PNG background
     // ════════════════════════════════════════════════════════════════
 
-    // Screws
-    addChild(createWidget<ScrewSilver>(Vec(0, 0)));
-    addChild(createWidget<ScrewSilver>(Vec(panelW - RACK_GRID_WIDTH, 0)));
-    addChild(createWidget<ScrewSilver>(Vec(0, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
-    addChild(createWidget<ScrewSilver>(Vec(panelW - RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+    // M1-M6 buttons (grey in image)
+    addChild(new ER301Button(BUTTON_MAIN1, Vec(mbX[0] - BTN_W/2, mbY - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_MAIN2, Vec(mbX[1] - BTN_W/2, mbY - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_MAIN3, Vec(mbX[2] - BTN_W/2, mbY - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_MAIN4, Vec(mbX[3] - BTN_W/2, mbY - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_MAIN5, Vec(mbX[4] - BTN_W/2, mbY - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_MAIN6, Vec(mbX[5] - BTN_W/2, mbY - BTN_H/2), Vec(BTN_W, BTN_H)));
 
-    // M1-M6 buttons
-    addChild(new ER301Button(BUTTON_MAIN1, Vec(mb1X, mbY), Vec(BTN_W, BTN_H), false, "M1", "QUICKSAVE"));
-    addChild(new ER301Button(BUTTON_MAIN2, Vec(mb2X, mbY), Vec(BTN_W, BTN_H), false, "M2"));
-    addChild(new ER301Button(BUTTON_MAIN3, Vec(mb3X, mbY), Vec(BTN_W, BTN_H), false, "M3"));
-    addChild(new ER301Button(BUTTON_MAIN4, Vec(mb4X, mbY), Vec(BTN_W, BTN_H), false, "M4"));
-    addChild(new ER301Button(BUTTON_MAIN5, Vec(mb5X, mbY), Vec(BTN_W, BTN_H), false, "M5"));
-    addChild(new ER301Button(BUTTON_MAIN6, Vec(mb6X, mbY), Vec(BTN_W, BTN_H), false, "M6", "FOCUS"));
+    // Dial/Sub buttons (first 3 blue, last 3 grey in image)
+    addChild(new ER301Button(BUTTON_DIAL1, Vec(mbX[0] - BTN_W/2, sbY - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_DIAL2, Vec(mbX[1] - BTN_W/2, sbY - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_DIAL3, Vec(mbX[2] - BTN_W/2, sbY - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_SUB1,  Vec(mbX[3] - BTN_W/2, sbY - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_SUB2,  Vec(mbX[4] - BTN_W/2, sbY - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_SUB3,  Vec(mbX[5] - BTN_W/2, sbY - BTN_H/2), Vec(BTN_W, BTN_H)));
 
-    // Dial/Sub buttons
-    addChild(new ER301Button(BUTTON_DIAL1, Vec(mb1X, sbY), Vec(BTN_W, BTN_H), true));
-    addChild(new ER301Button(BUTTON_DIAL2, Vec(mb2X, sbY), Vec(BTN_W, BTN_H), true, "CANCEL"));
-    addChild(new ER301Button(BUTTON_DIAL3, Vec(mb3X, sbY), Vec(BTN_W, BTN_H), true, "ZERO", "HOME"));
-    addChild(new ER301Button(BUTTON_SUB1, Vec(mb4X, sbY), Vec(BTN_W, BTN_H), false, "S1"));
-    addChild(new ER301Button(BUTTON_SUB2, Vec(mb5X, sbY), Vec(BTN_W, BTN_H), false, "S2"));
-    addChild(new ER301Button(BUTTON_SUB3, Vec(mb6X, sbY), Vec(BTN_W, BTN_H), false, "S3", "FOCUS"));
+    // Hard buttons (ENTER, UP, SHIFT — blue in image)
+    addChild(new ER301Button(BUTTON_ENTER, Vec(mbX[3] - BTN_W/2, hbY - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_UP,    Vec(mbX[4] - BTN_W/2, hbY - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_SHIFT, Vec(mbX[5] - BTN_W/2, hbY - BTN_H/2), Vec(BTN_W, BTN_H)));
 
-    // Hard buttons
-    addChild(new ER301Button(BUTTON_ENTER, Vec(mb4X, hbY), Vec(BTN_W, BTN_H), true, "ENTER", "COMMIT"));
-    addChild(new ER301Button(BUTTON_UP, Vec(mb5X, hbY), Vec(BTN_W, BTN_H), true, "UP"));
-    addChild(new ER301Button(BUTTON_SHIFT, Vec(mb6X, hbY), Vec(BTN_W, BTN_H), true, "SHIFT"));
+    // Select buttons 1-4
+    addChild(new ER301Button(BUTTON_SELECT1, Vec(selBtnX - BTN_W/2, jUpperY[0] - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_SELECT2, Vec(selBtnX - BTN_W/2, jUpperY[1] - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_SELECT3, Vec(selBtnX - BTN_W/2, jUpperY[2] - BTN_H/2), Vec(BTN_W, BTN_H)));
+    addChild(new ER301Button(BUTTON_SELECT4, Vec(selBtnX - BTN_W/2, jUpperY[3] - BTN_H/2), Vec(BTN_W, BTN_H)));
 
-    // Select buttons 1-4 (outlined, numbers inside)
-    addChild(new ER301Button(BUTTON_SELECT1, Vec(selBtnX, j1Y - BTN_H / 2), Vec(BTN_W, BTN_H), false, "1", "", true));
-    addChild(new ER301Button(BUTTON_SELECT2, Vec(selBtnX, j2Y - BTN_H / 2), Vec(BTN_W, BTN_H), false, "2", "", true));
-    addChild(new ER301Button(BUTTON_SELECT3, Vec(selBtnX, j3Y - BTN_H / 2), Vec(BTN_W, BTN_H), false, "3", "", true));
-    addChild(new ER301Button(BUTTON_SELECT4, Vec(selBtnX, j4Y - BTN_H / 2), Vec(BTN_W, BTN_H), false, "4", "", true));
-
-    // Encoder knob
-    addChild(new ER301Knob(Vec(knobX, knobY), Vec(KNOB_DIA, knobH)));
+    // Encoder knob (circular hit area)
+    float knobDia = knobR * 2;
+    addChild(new ER301Knob(Vec(knobCX - knobR, knobCY - knobR), Vec(knobDia, knobDia)));
 
     // Toggle switches
     addChild(new ER301Toggle(TOGGLE_STORAGE_A, TOGGLE_STORAGE_B,
-                             Vec(tStorageX, tStorageY), Vec(TOGGLE_W, TOGGLE_H),
-                             "STORAGE", "user", "admin", "eject"));
+                             Vec(tStorageX, tStorageY), Vec(TOGGLE_W, TOGGLE_H)));
     addChild(new ER301Toggle(TOGGLE_MODE_A, TOGGLE_MODE_B,
-                             Vec(tModeX, tModeY), Vec(TOGGLE_W, TOGGLE_H),
-                             "MODE", "hold", "edit", "scope"));
+                             Vec(tModeX, tModeY), Vec(TOGGLE_W, TOGGLE_H)));
 
     // ── LEDs ──
 
@@ -912,15 +729,15 @@ struct ER301Widget : ModuleWidget
     addChild(createLightCentered<MediumLight<RedLight>>(Vec(ioLedX, safeLedY), module, ER301Module::LIGHT_SAFE));
 
     // Output LEDs
-    addChild(createLightCentered<MediumLight<YellowLight>>(Vec(outLedX, j1Y), module, ER301Module::LIGHT_OUT1));
-    addChild(createLightCentered<MediumLight<YellowLight>>(Vec(outLedX, j2Y), module, ER301Module::LIGHT_OUT2));
-    addChild(createLightCentered<MediumLight<YellowLight>>(Vec(outLedX, j3Y), module, ER301Module::LIGHT_OUT3));
-    addChild(createLightCentered<MediumLight<YellowLight>>(Vec(outLedX, j4Y), module, ER301Module::LIGHT_OUT4));
+    addChild(createLightCentered<MediumLight<YellowLight>>(Vec(outLedX, jUpperY[0]), module, ER301Module::LIGHT_OUT1));
+    addChild(createLightCentered<MediumLight<YellowLight>>(Vec(outLedX, jUpperY[1]), module, ER301Module::LIGHT_OUT2));
+    addChild(createLightCentered<MediumLight<YellowLight>>(Vec(outLedX, jUpperY[2]), module, ER301Module::LIGHT_OUT3));
+    addChild(createLightCentered<MediumLight<YellowLight>>(Vec(outLedX, jUpperY[3]), module, ER301Module::LIGHT_OUT4));
 
-    // Link LEDs
-    addChild(createLightCentered<MediumLight<RedLight>>(Vec(outLedX, (j1Y + j2Y) / 2), module, ER301Module::LIGHT_LINK12));
-    addChild(createLightCentered<MediumLight<RedLight>>(Vec(outLedX, (j2Y + j3Y) / 2), module, ER301Module::LIGHT_LINK23));
-    addChild(createLightCentered<MediumLight<RedLight>>(Vec(outLedX, (j3Y + j4Y) / 2), module, ER301Module::LIGHT_LINK34));
+    // Link LEDs (between output rows)
+    addChild(createLightCentered<MediumLight<RedLight>>(Vec(outLedX, (jUpperY[0] + jUpperY[1]) / 2), module, ER301Module::LIGHT_LINK12));
+    addChild(createLightCentered<MediumLight<RedLight>>(Vec(outLedX, (jUpperY[1] + jUpperY[2]) / 2), module, ER301Module::LIGHT_LINK23));
+    addChild(createLightCentered<MediumLight<RedLight>>(Vec(outLedX, (jUpperY[2] + jUpperY[3]) / 2), module, ER301Module::LIGHT_LINK34));
 
     // CV input LEDs (green/red bicolor, upper-left of each jack)
     static const int cvGreenIds[] = {
@@ -928,28 +745,27 @@ struct ER301Widget : ModuleWidget
         ER301Module::LIGHT_CV_B1_GREEN, ER301Module::LIGHT_CV_B2_GREEN, ER301Module::LIGHT_CV_B3_GREEN,
         ER301Module::LIGHT_CV_C1_GREEN, ER301Module::LIGHT_CV_C2_GREEN, ER301Module::LIGHT_CV_C3_GREEN,
         ER301Module::LIGHT_CV_D1_GREEN, ER301Module::LIGHT_CV_D2_GREEN, ER301Module::LIGHT_CV_D3_GREEN};
-    float cvJx[] = {j1X, j2X, j3X, j4X};
-    float cvJy[] = {j5Y, j6Y, j7Y};
+    float cvJx[] = {jAX, jBX, jCX, jDX};
     for (int col = 0; col < 4; col++)
       for (int row = 0; row < 3; row++)
         addChild(createLightCentered<MediumLight<GreenRedLight>>(
-            Vec(cvJx[col] - 15, cvJy[row] - 15), module, cvGreenIds[col * 3 + row]));
+            Vec(cvJx[col] - 15, jABCDY[row] - 15), module, cvGreenIds[col * 3 + row]));
 
     // ── Jack ports ──
 
     // G1-G4
     for (int i = 0; i < 4; i++)
-      addInput(createInputCentered<PJ301MPort>(Vec(j2X, (&j1Y)[i]), module, ER301Module::INPUT_G1_PORT + i));
+      addInput(createInputCentered<PJ301MPort>(Vec(jGX, jUpperY[i]), module, ER301Module::INPUT_G1_PORT + i));
 
     // IN1-IN4
     for (int i = 0; i < 4; i++)
-      addInput(createInputCentered<PJ301MPort>(Vec(j3X, (&j1Y)[i]), module, ER301Module::INPUT_IN1_PORT + i));
+      addInput(createInputCentered<PJ301MPort>(Vec(jINX, jUpperY[i]), module, ER301Module::INPUT_IN1_PORT + i));
 
     // OUT1-OUT4
     for (int i = 0; i < 4; i++)
-      addOutput(createOutputCentered<PJ301MPort>(Vec(j4X, (&j1Y)[i]), module, ER301Module::OUTPUT_OUT1 + i));
+      addOutput(createOutputCentered<PJ301MPort>(Vec(jOUTX, jUpperY[i]), module, ER301Module::OUTPUT_OUT1 + i));
 
-    // ABCD CV inputs
+    // ABCD CV inputs (4 columns × 3 rows)
     int cvInputIds[4][3] = {
         {ER301Module::INPUT_A1_PORT, ER301Module::INPUT_A2_PORT, ER301Module::INPUT_A3_PORT},
         {ER301Module::INPUT_B1_PORT, ER301Module::INPUT_B2_PORT, ER301Module::INPUT_B3_PORT},
@@ -957,7 +773,7 @@ struct ER301Widget : ModuleWidget
         {ER301Module::INPUT_D1_PORT, ER301Module::INPUT_D2_PORT, ER301Module::INPUT_D3_PORT}};
     for (int col = 0; col < 4; col++)
       for (int row = 0; row < 3; row++)
-        addInput(createInputCentered<PJ301MPort>(Vec(cvJx[col], cvJy[row]), module, cvInputIds[col][row]));
+        addInput(createInputCentered<PJ301MPort>(Vec(cvJx[col], jABCDY[row]), module, cvInputIds[col][row]));
   }
 
   ~ER301Widget() {}
@@ -1018,35 +834,30 @@ struct ER301Widget : ModuleWidget
     float pw = box.size.x;
     float ph = box.size.y;
 
-    // ── Panel background ──
-    nvgBeginPath(vg);
-    nvgRect(vg, 0, 0, pw, ph);
-    nvgFillColor(vg, nvgRGB(228, 228, 230));
-    nvgFill(vg);
+    // ── Panel background from PNG image ──
+    if (panelImage < 0)
+    {
+      std::string imgPath = rack::asset::plugin(pluginInstance, "res/Panel.png");
+      panelImage = nvgCreateImage(vg, imgPath.c_str(), 0);
+    }
+    if (panelImage >= 0)
+    {
+      NVGpaint bgPaint = nvgImagePattern(vg, 0, 0, pw, ph, 0, panelImage, 1.0f);
+      nvgBeginPath(vg);
+      nvgRect(vg, 0, 0, pw, ph);
+      nvgFillPaint(vg, bgPaint);
+      nvgFill(vg);
+    }
+    else
+    {
+      // Fallback: solid grey if image failed to load
+      nvgBeginPath(vg);
+      nvgRect(vg, 0, 0, pw, ph);
+      nvgFillColor(vg, nvgRGB(205, 206, 206));
+      nvgFill(vg);
+    }
 
-    // ── Panel border ──
-    nvgBeginPath(vg);
-    nvgRect(vg, 0.5f, 0.5f, pw - 1, ph - 1);
-    nvgStrokeColor(vg, nvgRGB(160, 160, 162));
-    nvgStrokeWidth(vg, 0.75f);
-    nvgStroke(vg);
-
-    // ── Title (centered over display area) ──
-    float titleCx = mainDispX + MAIN_DW / 2;
-    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-    nvgFontSize(vg, 12);
-    nvgFillColor(vg, nvgRGB(30, 30, 30));
-    nvgText(vg, titleCx - 30, 12, "ER-301", NULL);
-    nvgFontSize(vg, 8);
-    nvgFillColor(vg, nvgRGB(80, 80, 80));
-    nvgText(vg, titleCx + 50, 12, "SOUND COMPUTER", NULL);
-
-    // ── Main Display bezel ──
-    nvgBeginPath(vg);
-    nvgRoundedRect(vg, mainDispX - 3, mainDispY - 3, MAIN_DW + 6, MAIN_DH + 6, 4);
-    nvgFillColor(vg, nvgRGB(0, 0, 0));
-    nvgFill(vg);
-
+    // ── Main Display (render pixel buffer on top of PNG display area) ──
     DisplayBuffer *dispBuf = Display_getLastPutBuffer();
     if (dispBuf)
     {
@@ -1057,20 +868,15 @@ struct ER301Widget : ModuleWidget
         nvgUpdateImage(vg, mainImage, mainPixels);
       if (mainImage >= 0)
       {
-        NVGpaint paint = nvgImagePattern(vg, mainDispX, mainDispY, MAIN_DW, MAIN_DH, 0, mainImage, 1.0f);
+        NVGpaint paint = nvgImagePattern(vg, mainDispX, mainDispY, mainDispW, mainDispH, 0, mainImage, 1.0f);
         nvgBeginPath(vg);
-        nvgRect(vg, mainDispX, mainDispY, MAIN_DW, MAIN_DH);
+        nvgRect(vg, mainDispX, mainDispY, mainDispW, mainDispH);
         nvgFillPaint(vg, paint);
         nvgFill(vg);
       }
     }
 
-    // ── Sub Display bezel ──
-    nvgBeginPath(vg);
-    nvgRoundedRect(vg, subDispX - 3, subDispY - 3, SUB_DW + 6, SUB_DH + 6, 4);
-    nvgFillColor(vg, nvgRGB(0, 0, 0));
-    nvgFill(vg);
-
+    // ── Sub Display ──
     if (dispBuf)
     {
       decodeSubDisplay(dispBuf);
@@ -1080,129 +886,13 @@ struct ER301Widget : ModuleWidget
         nvgUpdateImage(vg, subImage, subPixels);
       if (subImage >= 0)
       {
-        NVGpaint paint = nvgImagePattern(vg, subDispX, subDispY, SUB_DW, SUB_DH, 0, subImage, 1.0f);
+        NVGpaint paint = nvgImagePattern(vg, subDispX, subDispY, subDispW, subDispH, 0, subImage, 1.0f);
         nvgBeginPath(vg);
-        nvgRect(vg, subDispX, subDispY, SUB_DW, SUB_DH);
+        nvgRect(vg, subDispX, subDispY, subDispW, subDispH);
         nvgFillPaint(vg, paint);
         nvgFill(vg);
       }
     }
-
-    // ── Fine/Coarse labels (with underlines) ──
-    {
-      float fcX = mainDispX - 4;
-      float fcY = fineY;
-      nvgFontSize(vg, 7.5f);
-      nvgFillColor(vg, nvgRGB(30, 30, 30));
-      nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE);
-      // fine
-      nvgText(vg, fcX, fcY, "fine", NULL);
-      float fineW = nvgTextBounds(vg, 0, 0, "fine", NULL, NULL);
-      nvgBeginPath(vg);
-      nvgMoveTo(vg, fcX, fcY + 1.5f);
-      nvgLineTo(vg, fcX + fineW, fcY + 1.5f);
-      nvgStrokeColor(vg, nvgRGB(30, 30, 30));
-      nvgStrokeWidth(vg, 0.7f);
-      nvgStroke(vg);
-      // arrow below fine
-      nvgFontSize(vg, 9.0f);
-      nvgText(vg, fcX + 4, fcY + 10, "\xe2\x86\x95", NULL);
-      // coarse (offset right beside arrow)
-      nvgFontSize(vg, 7.5f);
-      nvgText(vg, fcX + 12, fcY + 14, "coarse", NULL);
-      float coarseW = nvgTextBounds(vg, 0, 0, "coarse", NULL, NULL);
-      nvgBeginPath(vg);
-      nvgMoveTo(vg, fcX + 12, fcY + 15.5f);
-      nvgLineTo(vg, fcX + 12 + coarseW, fcY + 15.5f);
-      nvgStroke(vg);
-      // arrow below coarse
-      nvgFontSize(vg, 9.0f);
-      nvgText(vg, fcX + 16, fcY + 24, "\xe2\x86\x94", NULL);
-    }
-
-    // ── I/O and Safe labels (above LEDs) ──
-    nvgFontSize(vg, 6.5f);
-    nvgFillColor(vg, nvgRGB(30, 30, 30));
-    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
-    nvgText(vg, ioLedX, ioLedY - 5, "I/O", NULL);
-    nvgText(vg, ioLedX, safeLedY - 5, "safe", NULL);
-
-    // ── G/IN/OUT column headers ──
-    nvgFontSize(vg, 8);
-    nvgFillColor(vg, nvgRGB(50, 50, 50));
-    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
-    nvgText(vg, j2X, j1Y - 18, "G", NULL);
-    nvgText(vg, j3X, j1Y - 18, "IN", NULL);
-    nvgText(vg, j4X, j1Y - 18, "OUT", NULL);
-
-    // ── Dashed vertical dividers between jack columns ──
-    {
-      float dTop = j1Y - 14;
-      float dBot = j4Y + 16;
-      float dxs[] = {(j1X + j2X) / 2, (j2X + j3X) / 2, (j3X + j4X) / 2};
-      nvgStrokeColor(vg, nvgRGB(176, 176, 178));
-      nvgStrokeWidth(vg, 0.5f);
-      for (int d = 0; d < 3; d++)
-        for (float y = dTop; y < dBot; y += 5)
-        {
-          nvgBeginPath(vg);
-          nvgMoveTo(vg, dxs[d], y);
-          nvgLineTo(vg, dxs[d], std::min(y + 2.5f, dBot));
-          nvgStroke(vg);
-        }
-    }
-
-    // ── "linked" labels ──
-    nvgFontSize(vg, 5.5f);
-    nvgFillColor(vg, nvgRGB(80, 80, 80));
-    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_TOP);
-    nvgText(vg, outLedX, (j1Y + j2Y) / 2 + 4, "linked", NULL);
-    nvgText(vg, outLedX, (j2Y + j3Y) / 2 + 4, "linked", NULL);
-    nvgText(vg, outLedX, (j3Y + j4Y) / 2 + 4, "linked", NULL);
-
-    // ── ABCD section divider ──
-    float abcdDivY = (j4Y + j5Y) / 2;
-    nvgStrokeColor(vg, nvgRGB(165, 165, 167));
-    nvgStrokeWidth(vg, 0.5f);
-    nvgBeginPath(vg);
-    nvgMoveTo(vg, j1X - 20, abcdDivY);
-    nvgLineTo(vg, pw - 4, abcdDivY);
-    nvgStroke(vg);
-
-    // ── ABCD jack labels (A1-D3 above each jack) ──
-    {
-      const char *cols[] = {"A", "B", "C", "D"};
-      float cvJx[] = {j1X, j2X, j3X, j4X};
-      float cvJy[] = {j5Y, j6Y, j7Y};
-      nvgFontSize(vg, 8);
-      nvgFillColor(vg, nvgRGB(42, 42, 42));
-      nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
-      for (int c = 0; c < 4; c++)
-        for (int r = 0; r < 3; r++)
-        {
-          char lbl[4];
-          snprintf(lbl, sizeof(lbl), "%s%d", cols[c], r + 1);
-          nvgText(vg, cvJx[c], cvJy[r] - 14, lbl, NULL);
-        }
-    }
-
-    // ── Dashed vertical dividers (ABCD section) ──
-    {
-      float abcdBot = j7Y + 16;
-      float dxs[] = {(j1X + j2X) / 2, (j2X + j3X) / 2, (j3X + j4X) / 2};
-      nvgStrokeColor(vg, nvgRGB(165, 165, 167));
-      nvgStrokeWidth(vg, 0.5f);
-      for (int d = 0; d < 3; d++)
-        for (float y = abcdDivY + 4; y < abcdBot; y += 6)
-        {
-          nvgBeginPath(vg);
-          nvgMoveTo(vg, dxs[d], y);
-          nvgLineTo(vg, dxs[d], std::min(y + 3.0f, abcdBot));
-          nvgStroke(vg);
-        }
-    }
-
-    // ── Bottom specs (disabled for now) ──
 
     ModuleWidget::draw(args);
   }

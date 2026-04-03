@@ -106,4 +106,6 @@ build/swig/app_swig.cpp: $(ER301)/od/glue/app.cpp.swig
 # Ensure SWIG runs before compilation
 $(shell mkdir -p build/swig)
 
+DISTRIBUTABLES += res
+
 include $(RACK_DIR)/plugin.mk
