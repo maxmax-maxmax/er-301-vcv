@@ -26,39 +26,42 @@ This is not a simplified emulation — it runs the actual ER-301 firmware with a
 - **Interactive controls**: 19 GPIO-mapped buttons, encoder knob with drag/scroll, 2 toggle switches
 - **Lua interpreter**: ER-301's full Lua UI boots on a separate thread, running `start.lua`
 
-### Phase 4-6: Panel Visual Matching
-- Iterated through HTML Canvas preview and NanoVG-drawn panel approaches
-- Arrived at Panel.png background with transparent widget overlays
+### Phase 4-7: Panel & Display
+- SVG panel built in Inkscape with VCV-standard component layer workflow
+- Custom SVG artwork: grey/blue buttons, Rogan2SGray encoder knob, NKK 3-position toggles
+- Display rendering with 4× nearest-neighbor upscale for crisp pixels at any zoom level
+- `sync_panel.sh` script for automated SVG-to-C++ position syncing
 
-### Phase 7: SVG Panel Transition (current)
-- Replaced PNG panel with standard VCV SVG panel workflow (`setPanel(createPanel(...))`)
-- Panel built in Inkscape with proper VCV component layer (color-coded placeholders for inputs/outputs/lights/custom widgets)
-- All widget positions generated via VCV `helper.py` using `mm2px()` coordinates
-- Custom SVG component artwork: grey and blue button SVGs, Rogan2SGray encoder knob, NKK 3-position toggle switch SVGs
-- Encoder knob visually rotates when dragged/scrolled
-- Buttons darken on press
-- Display overlays render with rounded corners on top of the SVG panel
+### Phase 8: Core DSP Packages
+- Promoted plugin symbols to `RTLD_GLOBAL` so `libcore.so` can resolve ER-301 symbols
+- All 80+ core units now load and work (oscillators, filters, delays, sample players, etc.)
 
-## What's Left
+## Roadmap
 
-### Verification
-- Fine-tune display positions to sit perfectly within the SVG panel bezels
-- Verify all 19 button-to-GPIO mappings are correct
-- Test toggle switch state persistence
+### Quick Wins
+- [ ] **Toggle persistence** — Save/restore toggle positions in VCV patch JSON (`dataToJson`/`dataFromJson`)
+- [ ] **Error handling** — Wrap Lua thread in try/catch, show error overlay on display if engine fails
+- [ ] **Right-click context menu** — Show log paths, xroot/rear/front paths, link to docs
+- [ ] **Single instance guard** — Detect and warn if a second module instance is added
+- [ ] **Button/knob tooltips** — Add hover tooltips to custom buttons (M1-M6, S1-S3, fine/coarse, cancel, zero, enter, up, shift), encoder knob, and toggles (storage, mode)
 
-### Functional Gaps
-- **Encoder button press** — the physical ER-301 encoder has a push-button (used for selection); not yet wired
-- **SD card / file system** — `card.cpp` has a basic implementation but saving/loading presets needs testing
-- **USB emulation** — `usb.cpp` exists but likely stubbed
-- **Audio sample rate matching** — ER-301 expects specific rates (48kHz/96kHz); VCV Rack runs at variable rates
-- **Module state persistence** — saving/restoring module state when VCV patches are saved/loaded
-- **Performance** — Lua interpreter + DSP engine running alongside VCV Rack may need profiling
-- **Single instance only** — ER-301 uses global state; only one module instance is supported
+### Medium Effort
+- [ ] **Sample rate matching** — Set `globalConfig.sampleRate` to match VCV's rate at init; warn if rate changes mid-session
+- [ ] **SD card / filesystem testing** — Validate quicksaves, preset save/load, WAV sample loading
+- [ ] **Module state persistence** — Trigger quicksave on VCV patch save, restore on load after engine init
+- [ ] **Performance profiling** — Add timing around `Pump_callback()`, track frame processing time
 
-### Polish
-- Right-click context menu for module settings
-- Error handling if ER-301 engine fails to initialize
-- Core DSP packages (mods/) not yet bundled
+### Hard / Research
+- [ ] **Full engine state save/restore** — Serialize complete Lua + DSP state beyond quicksaves
+- [ ] **Multi-instance support** — Would require refactoring all ER-301 global state (probably not worth it)
+
+### VCV Library Publication
+- [ ] **Brand permission** — Get explicit approval from Orthogonal Devices (Brian Clarkson) to use ER-301 name and panel design, or rebrand
+- [ ] **Static FFTW** — Replace Homebrew dynamic link with static build in `dep/` for cross-compilation
+- [ ] **Pre-generate SWIG** — Commit `app_swig.cpp` to repo so SWIG isn't needed at build time
+- [ ] **Cross-platform build** — Ensure Linux + Windows compilation via VCV rack-plugin-toolchain
+- [ ] **Relocate data files** — Move `~/.od/` data into Rack's standard user/plugin folder
+- [ ] **Bundle assets** — Include Lua scripts and xroot assets in `DISTRIBUTABLES`
 
 ## Prerequisites
 

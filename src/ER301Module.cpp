@@ -3,6 +3,7 @@
 #include <thread>
 #include <atomic>
 #include <cstring>
+#include <dlfcn.h>
 
 // ER-301 headers
 extern "C"
@@ -260,6 +261,21 @@ struct ER301Module : Module
     audioReady.store(true, std::memory_order_release);
 
     Events_push(EVENT_DISPLAY_READY);
+
+    // Re-open our own dylib with RTLD_GLOBAL so that libcore.so (and other
+    // ER-301 mod .so files loaded via Lua's require/dlopen) can resolve
+    // symbols exported from the main plugin (e.g. od::ZeroOutput).
+    {
+      Dl_info info;
+      if (dladdr((void *)&Audio_init, &info) && info.dli_fname)
+      {
+        void *self = dlopen(info.dli_fname, RTLD_NOW | RTLD_GLOBAL);
+        if (self)
+          logInfo("VCV: Promoted plugin symbols to RTLD_GLOBAL");
+        else
+          logInfo("VCV: dlopen RTLD_GLOBAL failed: %s", dlerror());
+      }
+    }
 
     logInfo("VCV: Starting Lua interpreter thread...");
 
@@ -569,8 +585,9 @@ struct ER301Widget : ModuleWidget
 {
   int mainImage = -1;
   int subImage = -1;
-  uint8_t mainPixels[MAIN_HORIZONTAL_PIXELS * MAIN_VERTICAL_PIXELS * 4];
-  uint8_t subPixels[SUB_HORIZONTAL_PIXELS * SUB_VERTICAL_PIXELS * 4];
+  static constexpr int UPSCALE = 4;
+  uint8_t mainPixels[MAIN_HORIZONTAL_PIXELS * UPSCALE * MAIN_VERTICAL_PIXELS * UPSCALE * 4];
+  uint8_t subPixels[SUB_HORIZONTAL_PIXELS * UPSCALE * SUB_VERTICAL_PIXELS * UPSCALE * 4];
 
   static constexpr int SCREEN_BRIGHTNESS = 15;
   static constexpr float SCREEN_TINT = 0.85f;
@@ -589,15 +606,15 @@ struct ER301Widget : ModuleWidget
     setPanel(createPanel(asset::plugin(pluginInstance, "res/ER301.svg")));
 
     // ── Display positions from SVG (Screen-Large and Screen-small) ──
-    Vec mainPos = mm2px(Vec(4.565f, 14.931f));
-    Vec mainSize = mm2px(Vec(80.848f, 22.036f));
+    Vec mainPos = mm2px(Vec(5.743f, 15.814f));
+    Vec mainSize = mm2px(Vec(78.493f, 20.270f));
     mainDispX = mainPos.x;
     mainDispY = mainPos.y;
     mainDispW = mainSize.x;
     mainDispH = mainSize.y;
 
-    Vec subPos = mm2px(Vec(47.102f, 63.976f));
-    Vec subSize = mm2px(Vec(38.727f, 20.268f));
+    Vec subPos = mm2px(Vec(48.280f, 64.859f));
+    Vec subSize = mm2px(Vec(36.372f, 18.502f));
     subDispX = subPos.x;
     subDispY = subPos.y;
     subDispW = subSize.x;
@@ -714,7 +731,7 @@ struct ER301Widget : ModuleWidget
     // ── Encoder knob (SVG artwork, centered) ──
     {
       ER301Knob *knob = new ER301Knob();
-      Vec knobCenter = mm2px(Vec(23.261f, 74.118f));
+      Vec knobCenter = mm2px(Vec(23.196f, 72.813f));
       knob->box.pos = Vec(knobCenter.x - knob->box.size.x / 2, knobCenter.y - knob->box.size.y / 2);
       addChild(knob);
     }
@@ -725,6 +742,7 @@ struct ER301Widget : ModuleWidget
   void decodeMainDisplay(DisplayBuffer *buf)
   {
     uint16_t *src = (uint16_t *)buf->main;
+    const int W = MAIN_HORIZONTAL_PIXELS * UPSCALE;
     for (int y = 0; y < MAIN_VERTICAL_PIXELS; y++)
     {
       int yy = MAIN_VERTICAL_PIXELS - y - 1;
@@ -735,11 +753,20 @@ struct ER301Widget : ModuleWidget
         int shift = ((~xx & 1) << 2);
         int value = (cell >> shift) & 0xF;
         value *= SCREEN_BRIGHTNESS;
-        int idx = (y * MAIN_HORIZONTAL_PIXELS + x) * 4;
-        mainPixels[idx + 0] = (uint8_t)std::min(value, 255);
-        mainPixels[idx + 1] = (uint8_t)std::min((int)(value * SCREEN_TINT), 255);
-        mainPixels[idx + 2] = 0;
-        mainPixels[idx + 3] = 255;
+        uint8_t r = (uint8_t)std::min(value, 255);
+        uint8_t g = (uint8_t)std::min((int)(value * SCREEN_TINT), 255);
+        // Write UPSCALE×UPSCALE block
+        for (int dy = 0; dy < UPSCALE; dy++)
+        {
+          for (int dx = 0; dx < UPSCALE; dx++)
+          {
+            int idx = ((y * UPSCALE + dy) * W + (x * UPSCALE + dx)) * 4;
+            mainPixels[idx + 0] = r;
+            mainPixels[idx + 1] = g;
+            mainPixels[idx + 2] = 0;
+            mainPixels[idx + 3] = 255;
+          }
+        }
       }
     }
   }
@@ -747,6 +774,7 @@ struct ER301Widget : ModuleWidget
   void decodeSubDisplay(DisplayBuffer *buf)
   {
     uint16_t *src = (uint16_t *)buf->sub;
+    const int W = SUB_HORIZONTAL_PIXELS * UPSCALE;
     for (int y = 0; y < SUB_VERTICAL_PIXELS; y++)
     {
       int yy = SUB_VERTICAL_PIXELS - y - 1;
@@ -757,11 +785,20 @@ struct ER301Widget : ModuleWidget
         uint16_t cell = src[((yy >> 3) << 7) + xx];
         int value = (cell >> shift) & 1;
         value *= 0xF * SCREEN_BRIGHTNESS;
-        int idx = (y * SUB_HORIZONTAL_PIXELS + x) * 4;
-        subPixels[idx + 0] = (uint8_t)std::min(value, 255);
-        subPixels[idx + 1] = (uint8_t)std::min((int)(value * SCREEN_TINT), 255);
-        subPixels[idx + 2] = 0;
-        subPixels[idx + 3] = 255;
+        uint8_t r = (uint8_t)std::min(value, 255);
+        uint8_t g = (uint8_t)std::min((int)(value * SCREEN_TINT), 255);
+        // Write UPSCALE×UPSCALE block
+        for (int dy = 0; dy < UPSCALE; dy++)
+        {
+          for (int dx = 0; dx < UPSCALE; dx++)
+          {
+            int idx = ((y * UPSCALE + dy) * W + (x * UPSCALE + dx)) * 4;
+            subPixels[idx + 0] = r;
+            subPixels[idx + 1] = g;
+            subPixels[idx + 2] = 0;
+            subPixels[idx + 3] = 255;
+          }
+        }
       }
     }
   }
@@ -784,7 +821,7 @@ struct ER301Widget : ModuleWidget
     {
       decodeMainDisplay(dispBuf);
       if (mainImage < 0)
-        mainImage = nvgCreateImageRGBA(vg, MAIN_HORIZONTAL_PIXELS, MAIN_VERTICAL_PIXELS, 0, mainPixels);
+        mainImage = nvgCreateImageRGBA(vg, MAIN_HORIZONTAL_PIXELS * UPSCALE, MAIN_VERTICAL_PIXELS * UPSCALE, NVG_IMAGE_NEAREST, mainPixels);
       else
         nvgUpdateImage(vg, mainImage, mainPixels);
       if (mainImage >= 0)
@@ -802,7 +839,7 @@ struct ER301Widget : ModuleWidget
     {
       decodeSubDisplay(dispBuf);
       if (subImage < 0)
-        subImage = nvgCreateImageRGBA(vg, SUB_HORIZONTAL_PIXELS, SUB_VERTICAL_PIXELS, 0, subPixels);
+        subImage = nvgCreateImageRGBA(vg, SUB_HORIZONTAL_PIXELS * UPSCALE, SUB_VERTICAL_PIXELS * UPSCALE, NVG_IMAGE_NEAREST, subPixels);
       else
         nvgUpdateImage(vg, subImage, subPixels);
       if (subImage >= 0)

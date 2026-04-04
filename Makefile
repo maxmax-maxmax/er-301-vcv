@@ -29,7 +29,7 @@ FLAGS += -ffast-math -ftree-vectorize
 FLAGS += -Wno-c++11-narrowing -Wno-sign-compare -Wno-unused-variable
 
 # FFTW
-FFTW_PREFIX := $(shell brew --prefix fftw)
+FFTW_PREFIX := $(shell brew --prefix fftw 2>/dev/null || echo /opt/homebrew)
 FLAGS += -I$(FFTW_PREFIX)/include
 LDFLAGS += -L$(FFTW_PREFIX)/lib -lfftw3f
 
@@ -109,3 +109,9 @@ $(shell mkdir -p build/swig)
 DISTRIBUTABLES += res
 
 include $(RACK_DIR)/plugin.mk
+
+# Direct install (bypasses zstd packaging)
+PLUGINS_DIR ?= $(HOME)/Library/Application Support/Rack2/plugins-mac-arm64
+direct-install: all dist
+	rsync -a dist/ER-301/ "$(PLUGINS_DIR)/ER-301/"
+	@echo "Installed to $(PLUGINS_DIR)/ER-301/"
