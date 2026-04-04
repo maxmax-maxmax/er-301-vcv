@@ -373,7 +373,6 @@ struct ER301Module : Module
     if (engineFailed.load(std::memory_order_acquire))
       return;
 
-
     // Write one sample of input into the interleaved input frame
     int offset = framePos * NUM_INPUT_CHANNELS;
     for (int i = 0; i < NUM_INPUTS; i++)

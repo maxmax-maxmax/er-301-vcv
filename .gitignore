@@ -19,3 +19,6 @@ dep/
 
 # er-301 symlink (user creates locally)
 er-301
+
+# Development archive
+archive/
