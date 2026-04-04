@@ -589,14 +589,14 @@ struct ER301Widget : ModuleWidget
     setPanel(createPanel(asset::plugin(pluginInstance, "res/ER301.svg")));
 
     // ── Display positions from SVG (Screen-Large and Screen-small) ──
-    Vec mainPos = mm2px(Vec(4.642f, 14.931f));
+    Vec mainPos = mm2px(Vec(4.565f, 14.931f));
     Vec mainSize = mm2px(Vec(80.848f, 22.036f));
     mainDispX = mainPos.x;
     mainDispY = mainPos.y;
     mainDispW = mainSize.x;
     mainDispH = mainSize.y;
 
-    Vec subPos = mm2px(Vec(47.179f, 63.976f));
+    Vec subPos = mm2px(Vec(47.102f, 63.976f));
     Vec subSize = mm2px(Vec(38.727f, 20.268f));
     subDispX = subPos.x;
     subDispY = subPos.y;
@@ -605,99 +605,99 @@ struct ER301Widget : ModuleWidget
 
     // ── Screws ──
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(7.656f, 2.688f))));
-    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(146.675f, 2.688f))));
+    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(144.791f, 2.688f))));
     addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(7.656f, 125.691f))));
-    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(146.675f, 125.691f))));
+    addChild(createWidgetCentered<ScrewSilver>(mm2px(Vec(144.791f, 125.691f))));
 
     // ── Input jacks ──
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.882f, 17.982f)), module, ER301Module::G1_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.334f, 17.982f)), module, ER301Module::IN1_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.882f, 34.161f)), module, ER301Module::G2_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.334f, 34.161f)), module, ER301Module::IN2_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.882f, 50.185f)), module, ER301Module::G3_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.334f, 50.185f)), module, ER301Module::IN3_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.882f, 66.018f)), module, ER301Module::G4_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.334f, 66.018f)), module, ER301Module::IN4_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(102.372f, 82.273f)), module, ER301Module::A1_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.882f, 82.273f)), module, ER301Module::B1_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.334f, 82.273f)), module, ER301Module::C1_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(145.649f, 82.273f)), module, ER301Module::D1_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(102.372f, 98.244f)), module, ER301Module::A2_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.882f, 98.244f)), module, ER301Module::B2_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.334f, 98.244f)), module, ER301Module::C2_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(145.649f, 98.244f)), module, ER301Module::D2_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(102.372f, 114.214f)), module, ER301Module::A3_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.882f, 114.214f)), module, ER301Module::B3_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.334f, 114.214f)), module, ER301Module::C3_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(145.649f, 114.214f)), module, ER301Module::D3_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.806f, 17.982f)), module, ER301Module::G1_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.257f, 17.982f)), module, ER301Module::IN1_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.806f, 34.161f)), module, ER301Module::G2_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.257f, 34.161f)), module, ER301Module::IN2_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.806f, 50.185f)), module, ER301Module::G3_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.257f, 50.185f)), module, ER301Module::IN3_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.806f, 66.018f)), module, ER301Module::G4_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.257f, 66.018f)), module, ER301Module::IN4_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(102.295f, 82.273f)), module, ER301Module::A1_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.806f, 82.273f)), module, ER301Module::B1_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.257f, 82.273f)), module, ER301Module::C1_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(145.572f, 82.273f)), module, ER301Module::D1_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(102.295f, 98.244f)), module, ER301Module::A2_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.806f, 98.244f)), module, ER301Module::B2_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.257f, 98.244f)), module, ER301Module::C2_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(145.572f, 98.244f)), module, ER301Module::D2_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(102.295f, 114.214f)), module, ER301Module::A3_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(116.806f, 114.214f)), module, ER301Module::B3_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(131.257f, 114.214f)), module, ER301Module::C3_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(145.572f, 114.214f)), module, ER301Module::D3_INPUT));
 
     // ── Output jacks ──
-    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(145.649f, 17.982f)), module, ER301Module::OUT1_OUTPUT));
-    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(145.649f, 34.161f)), module, ER301Module::OUT2_OUTPUT));
-    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(145.649f, 50.185f)), module, ER301Module::OUT3_OUTPUT));
-    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(145.649f, 66.018f)), module, ER301Module::OUT4_OUTPUT));
+    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(145.572f, 17.982f)), module, ER301Module::OUT1_OUTPUT));
+    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(145.572f, 34.161f)), module, ER301Module::OUT2_OUTPUT));
+    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(145.572f, 50.185f)), module, ER301Module::OUT3_OUTPUT));
+    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(145.572f, 66.018f)), module, ER301Module::OUT4_OUTPUT));
 
     // ── LEDs — Output channel ──
-    addChild(createLightCentered<MediumLight<YellowLight>>(mm2px(Vec(92.417f, 18.045f)), module, ER301Module::LED_1_LIGHT));
-    addChild(createLightCentered<MediumLight<YellowLight>>(mm2px(Vec(92.502f, 34.161f)), module, ER301Module::LED_2_LIGHT));
-    addChild(createLightCentered<MediumLight<YellowLight>>(mm2px(Vec(92.502f, 50.185f)), module, ER301Module::LED_3_LIGHT));
-    addChild(createLightCentered<MediumLight<YellowLight>>(mm2px(Vec(92.502f, 66.018f)), module, ER301Module::LED_4_LIGHT));
+    addChild(createLightCentered<MediumLight<YellowLight>>(mm2px(Vec(92.341f, 18.045f)), module, ER301Module::LED_1_LIGHT));
+    addChild(createLightCentered<MediumLight<YellowLight>>(mm2px(Vec(92.425f, 34.161f)), module, ER301Module::LED_2_LIGHT));
+    addChild(createLightCentered<MediumLight<YellowLight>>(mm2px(Vec(92.425f, 50.185f)), module, ER301Module::LED_3_LIGHT));
+    addChild(createLightCentered<MediumLight<YellowLight>>(mm2px(Vec(92.425f, 66.018f)), module, ER301Module::LED_4_LIGHT));
 
     // ── LEDs — Link ──
-    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(92.502f, 25.949f)), module, ER301Module::LINKED1_2_LIGHT));
-    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(92.502f, 42.011f)), module, ER301Module::LINKED2_3_LIGHT));
-    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(92.502f, 58.124f)), module, ER301Module::LINKED3_4_LIGHT));
+    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(92.425f, 25.949f)), module, ER301Module::LINKED1_2_LIGHT));
+    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(92.425f, 42.011f)), module, ER301Module::LINKED2_3_LIGHT));
+    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(92.425f, 58.124f)), module, ER301Module::LINKED3_4_LIGHT));
 
     // ── LEDs — Fine/Coarse ──
-    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(8.869f, 85.234f)), module, ER301Module::LED_FINE_LIGHT));
-    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(14.286f, 89.939f)), module, ER301Module::LED_COARSE_LIGHT));
+    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(8.793f, 85.234f)), module, ER301Module::LED_FINE_LIGHT));
+    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(14.209f, 89.939f)), module, ER301Module::LED_COARSE_LIGHT));
 
     // ── LEDs — I/O, Safe ──
-    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(27.119f, 110.552f)), module, ER301Module::LED_I_O_LIGHT));
-    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(27.119f, 116.716f)), module, ER301Module::LED_SAFE_LIGHT));
+    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(27.042f, 110.552f)), module, ER301Module::LED_I_O_LIGHT));
+    addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(27.042f, 116.716f)), module, ER301Module::LED_SAFE_LIGHT));
 
     // ── LEDs — CV bicolor (green/red) ──
-    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(94.759f, 78.004f)), module, ER301Module::LED_A1_GREEN));
-    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(94.759f, 93.958f)), module, ER301Module::LED_A2_GREEN));
-    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(94.759f, 109.934f)), module, ER301Module::LED_A3_GREEN));
-    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(109.168f, 78.004f)), module, ER301Module::LED_B1_GREEN));
-    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(109.168f, 93.958f)), module, ER301Module::LED_B2_GREEN));
-    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(109.168f, 109.934f)), module, ER301Module::LED_B3_GREEN));
-    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(123.553f, 78.004f)), module, ER301Module::LED_C1_GREEN));
-    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(123.553f, 93.958f)), module, ER301Module::LED_C2_GREEN));
-    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(123.553f, 109.934f)), module, ER301Module::LED_C3_GREEN));
-    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(137.948f, 78.004f)), module, ER301Module::LED_D1_GREEN));
-    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(137.948f, 93.958f)), module, ER301Module::LED_D2_GREEN));
-    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(137.948f, 109.934f)), module, ER301Module::LED_D3_GREEN));
+    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(94.682f, 78.004f)), module, ER301Module::LED_A1_GREEN));
+    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(94.682f, 93.958f)), module, ER301Module::LED_A2_GREEN));
+    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(94.682f, 109.934f)), module, ER301Module::LED_A3_GREEN));
+    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(109.092f, 78.004f)), module, ER301Module::LED_B1_GREEN));
+    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(109.092f, 93.958f)), module, ER301Module::LED_B2_GREEN));
+    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(109.092f, 109.934f)), module, ER301Module::LED_B3_GREEN));
+    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(123.477f, 78.004f)), module, ER301Module::LED_C1_GREEN));
+    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(123.477f, 93.958f)), module, ER301Module::LED_C2_GREEN));
+    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(123.477f, 109.934f)), module, ER301Module::LED_C3_GREEN));
+    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(137.871f, 78.004f)), module, ER301Module::LED_D1_GREEN));
+    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(137.871f, 93.958f)), module, ER301Module::LED_D2_GREEN));
+    addChild(createLightCentered<MediumLight<GreenRedLight>>(mm2px(Vec(137.871f, 109.934f)), module, ER301Module::LED_D3_GREEN));
 
     // ── Buttons — Select 1-4 (grey) ──
     std::string greyBtn = "res/components/GreyButton.svg";
     std::string blueBtn = "res/components/BlueButton.svg";
-    addChild(createER301Button(BUTTON_SELECT1, mm2px(Vec(98.072f, 13.921f)), greyBtn));
-    addChild(createER301Button(BUTTON_SELECT2, mm2px(Vec(98.072f, 30.1f)), greyBtn));
-    addChild(createER301Button(BUTTON_SELECT3, mm2px(Vec(98.072f, 46.124f)), greyBtn));
-    addChild(createER301Button(BUTTON_SELECT4, mm2px(Vec(98.072f, 61.956f)), greyBtn));
+    addChild(createER301Button(BUTTON_SELECT1, mm2px(Vec(97.995f, 13.921f)), greyBtn));
+    addChild(createER301Button(BUTTON_SELECT2, mm2px(Vec(97.995f, 30.100f)), greyBtn));
+    addChild(createER301Button(BUTTON_SELECT3, mm2px(Vec(97.995f, 46.124f)), greyBtn));
+    addChild(createER301Button(BUTTON_SELECT4, mm2px(Vec(97.995f, 61.956f)), greyBtn));
 
     // ── Buttons — M1-M6 (grey row) ──
-    addChild(createER301Button(BUTTON_MAIN1, mm2px(Vec(4.57f, 46.124f)), greyBtn));
-    addChild(createER301Button(BUTTON_MAIN2, mm2px(Vec(19.104f, 46.124f)), greyBtn));
-    addChild(createER301Button(BUTTON_MAIN3, mm2px(Vec(33.576f, 46.124f)), greyBtn));
-    addChild(createER301Button(BUTTON_MAIN4, mm2px(Vec(48.068f, 46.124f)), greyBtn));
-    addChild(createER301Button(BUTTON_MAIN5, mm2px(Vec(62.598f, 46.124f)), greyBtn));
-    addChild(createER301Button(BUTTON_MAIN6, mm2px(Vec(76.986f, 46.124f)), greyBtn));
+    addChild(createER301Button(BUTTON_MAIN1, mm2px(Vec(4.493f, 46.124f)), greyBtn));
+    addChild(createER301Button(BUTTON_MAIN2, mm2px(Vec(19.027f, 46.124f)), greyBtn));
+    addChild(createER301Button(BUTTON_MAIN3, mm2px(Vec(33.500f, 46.124f)), greyBtn));
+    addChild(createER301Button(BUTTON_MAIN4, mm2px(Vec(47.991f, 46.124f)), greyBtn));
+    addChild(createER301Button(BUTTON_MAIN5, mm2px(Vec(62.521f, 46.124f)), greyBtn));
+    addChild(createER301Button(BUTTON_MAIN6, mm2px(Vec(76.909f, 46.124f)), greyBtn));
 
     // ── Buttons — Dial/Sub row ──
-    addChild(createER301Button(BUTTON_DIAL1, mm2px(Vec(4.57f, 94.182f)), blueBtn));    // fine/coarse
-    addChild(createER301Button(BUTTON_DIAL2, mm2px(Vec(19.104f, 94.182f)), blueBtn));   // cancel
-    addChild(createER301Button(BUTTON_DIAL3, mm2px(Vec(33.576f, 94.182f)), blueBtn));   // zero
-    addChild(createER301Button(BUTTON_SUB1, mm2px(Vec(48.068f, 94.182f)), greyBtn));    // S1
-    addChild(createER301Button(BUTTON_SUB2, mm2px(Vec(62.598f, 94.182f)), greyBtn));    // S2
-    addChild(createER301Button(BUTTON_SUB3, mm2px(Vec(76.986f, 94.182f)), greyBtn));    // S3
+    addChild(createER301Button(BUTTON_DIAL1, mm2px(Vec(4.493f, 94.182f)), blueBtn));    // fine/coarse
+    addChild(createER301Button(BUTTON_DIAL2, mm2px(Vec(19.027f, 94.182f)), blueBtn));   // cancel
+    addChild(createER301Button(BUTTON_DIAL3, mm2px(Vec(33.500f, 94.182f)), blueBtn));   // zero
+    addChild(createER301Button(BUTTON_SUB1, mm2px(Vec(47.991f, 94.182f)), greyBtn));    // S1
+    addChild(createER301Button(BUTTON_SUB2, mm2px(Vec(62.521f, 94.182f)), greyBtn));    // S2
+    addChild(createER301Button(BUTTON_SUB3, mm2px(Vec(76.909f, 94.182f)), greyBtn));    // S3
 
     // ── Buttons — Hard row (blue: enter, up, shift) ──
-    addChild(createER301Button(BUTTON_ENTER, mm2px(Vec(48.068f, 110.153f)), blueBtn));
-    addChild(createER301Button(BUTTON_UP, mm2px(Vec(62.598f, 110.153f)), blueBtn));
-    addChild(createER301Button(BUTTON_SHIFT, mm2px(Vec(76.986f, 110.153f)), blueBtn));
+    addChild(createER301Button(BUTTON_ENTER, mm2px(Vec(47.991f, 110.153f)), blueBtn));
+    addChild(createER301Button(BUTTON_UP, mm2px(Vec(62.521f, 110.153f)), blueBtn));
+    addChild(createER301Button(BUTTON_SHIFT, mm2px(Vec(76.909f, 110.153f)), blueBtn));
 
     // ── Toggle switches (3-position with SVG frames) ──
     {
@@ -714,7 +714,7 @@ struct ER301Widget : ModuleWidget
     // ── Encoder knob (SVG artwork, centered) ──
     {
       ER301Knob *knob = new ER301Knob();
-      Vec knobCenter = mm2px(Vec(23.338f, 74.118f));
+      Vec knobCenter = mm2px(Vec(23.261f, 74.118f));
       knob->box.pos = Vec(knobCenter.x - knob->box.size.x / 2, knobCenter.y - knob->box.size.y / 2);
       addChild(knob);
     }
