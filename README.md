@@ -39,9 +39,9 @@ This is not a simplified emulation — it runs the actual ER-301 firmware with a
 ## Roadmap
 
 ### Phase 1 — Stability & Safety
-- [ ] **Error handling** — Wrap Lua thread in try/catch, show error overlay on display if engine fails
-- [ ] **Single instance guard** — Detect and warn if a second module instance is added
-- [ ] **Sample rate matching** — Set `globalConfig.sampleRate` to match VCV's rate at init; warn if rate changes mid-session
+- [x] **Error handling** — Lua thread and HAL init wrapped in try/catch, error overlay on both displays if engine fails
+- [x] **Single instance guard** — Detects and blocks second instance with error overlay
+- [x] **Sample rate warning** — Shows amber warning on main display if VCV rate doesn't match ER-301's 48kHz at boot. Note: rate changes require a VCV restart to take effect (the ER-301 engine locks its sample rate at init)
 
 ### Phase 2 — Usability
 - [ ] **Keyboard shortcuts** — Map keyboard keys to buttons (like the ER-301 emulator), enabling button combos (SHIFT+ENTER, SHIFT+SELECT for mute, SELECT+SELECT for channel linking)

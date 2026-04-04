@@ -124,6 +124,9 @@ struct ER301Module : Module
   // Engine state
   std::atomic<bool> engineReady{false};
   std::atomic<bool> audioReady{false};
+  std::atomic<bool> engineFailed{false};
+  std::string engineError;
+  std::string sampleRateWarning;
   std::thread luaThread;
   bool initialized = false;
 
@@ -133,8 +136,11 @@ struct ER301Module : Module
   std::string frontRootStr;
   std::string firmwareCfgStr;
 
+  static std::atomic<int> instanceCount;
+
   ER301Module()
   {
+    instanceCount.fetch_add(1, std::memory_order_relaxed);
     config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 
     configInput(G1_INPUT, "G1 Gate");
@@ -200,6 +206,7 @@ struct ER301Module : Module
       }
       Audio_stop();
     }
+    instanceCount.fetch_sub(1, std::memory_order_relaxed);
   }
 
   void initEngine()
@@ -207,6 +214,15 @@ struct ER301Module : Module
     if (initialized)
       return;
     initialized = true;
+
+    // Only one ER-301 instance can run (engine uses global state)
+    if (instanceCount.load(std::memory_order_relaxed) > 1)
+    {
+      engineError = "Only one ER-301 instance is supported. Delete this module and keep the other one.";
+      engineFailed.store(true, std::memory_order_release);
+      WARN("ER-301: %s", engineError.c_str());
+      return;
+    }
 
     TLS_setName("main");
 
@@ -231,50 +247,79 @@ struct ER301Module : Module
     rack::system::createDirectories(rearRootStr);
     rack::system::createDirectories(frontRootStr);
 
-    Heap_init();
-    Timing_init();
-    Uart_init();
-    Card_init();
-    Uart_enable();
-    Log_init();
-
-    logInfo("VCV: xRoot = %s", xRootStr.c_str());
-    logInfo("VCV: rearRoot = %s", rearRootStr.c_str());
-    logInfo("VCV: frontRoot = %s", frontRootStr.c_str());
-
-    firmwareCfgStr = rearRootStr + "/firmware.cfg";
-    Config_init(firmwareCfgStr.c_str(), xRootStr.c_str(), rearRootStr.c_str(), frontRootStr.c_str());
-
-    Pump_init();
-    Rng_init();
-    Gpio_init();
-    Events_init();
-    USB_init();
-    Encoder_init();
-    Pwm_init();
-    Adc_init();
-    Modulation_init();
-    Audio_init();
-    Display_init();
-    od::Random::init();
-    od::AudioThread::init();
-    audioReady.store(true, std::memory_order_release);
-
-    Events_push(EVENT_DISPLAY_READY);
-
-    // Re-open our own dylib with RTLD_GLOBAL so that libcore.so (and other
-    // ER-301 mod .so files loaded via Lua's require/dlopen) can resolve
-    // symbols exported from the main plugin (e.g. od::ZeroOutput).
+    try
     {
-      Dl_info info;
-      if (dladdr((void *)&Audio_init, &info) && info.dli_fname)
+      Heap_init();
+      Timing_init();
+      Uart_init();
+      Card_init();
+      Uart_enable();
+      Log_init();
+
+      logInfo("VCV: xRoot = %s", xRootStr.c_str());
+      logInfo("VCV: rearRoot = %s", rearRootStr.c_str());
+      logInfo("VCV: frontRoot = %s", frontRootStr.c_str());
+
+      firmwareCfgStr = rearRootStr + "/firmware.cfg";
+      Config_init(firmwareCfgStr.c_str(), xRootStr.c_str(), rearRootStr.c_str(), frontRootStr.c_str());
+
+      // Check if VCV rate matches ER-301 rate
+      float vcvRate = APP->engine->getSampleRate();
+      if (std::abs(vcvRate - (float)globalConfig.sampleRate) > 100.f)
       {
-        void *self = dlopen(info.dli_fname, RTLD_NOW | RTLD_GLOBAL);
-        if (self)
-          logInfo("VCV: Promoted plugin symbols to RTLD_GLOBAL");
-        else
-          logInfo("VCV: dlopen RTLD_GLOBAL failed: %s", dlerror());
+        char buf[96];
+        snprintf(buf, sizeof(buf),
+                 "%.0fHz != %dHz — restart VCV to apply",
+                 vcvRate, globalConfig.sampleRate);
+        sampleRateWarning = buf;
+        logInfo("VCV: %s", buf);
       }
+
+      Pump_init();
+      Rng_init();
+      Gpio_init();
+      Events_init();
+      USB_init();
+      Encoder_init();
+      Pwm_init();
+      Adc_init();
+      Modulation_init();
+      Audio_init();
+      Display_init();
+      od::Random::init();
+      od::AudioThread::init();
+      audioReady.store(true, std::memory_order_release);
+
+      Events_push(EVENT_DISPLAY_READY);
+
+      // Re-open our own dylib with RTLD_GLOBAL so that libcore.so (and other
+      // ER-301 mod .so files loaded via Lua's require/dlopen) can resolve
+      // symbols exported from the main plugin (e.g. od::ZeroOutput).
+      {
+        Dl_info info;
+        if (dladdr((void *)&Audio_init, &info) && info.dli_fname)
+        {
+          void *self = dlopen(info.dli_fname, RTLD_NOW | RTLD_GLOBAL);
+          if (self)
+            logInfo("VCV: Promoted plugin symbols to RTLD_GLOBAL");
+          else
+            logInfo("VCV: dlopen RTLD_GLOBAL failed: %s", dlerror());
+        }
+      }
+    }
+    catch (const std::exception &e)
+    {
+      engineError = std::string("HAL init failed: ") + e.what();
+      engineFailed.store(true, std::memory_order_release);
+      WARN("ER-301: %s", engineError.c_str());
+      return;
+    }
+    catch (...)
+    {
+      engineError = "HAL init failed: unknown error";
+      engineFailed.store(true, std::memory_order_release);
+      WARN("ER-301: %s", engineError.c_str());
+      return;
     }
 
     logInfo("VCV: Starting Lua interpreter thread...");
@@ -283,21 +328,36 @@ struct ER301Module : Module
     luaThread = std::thread([this]()
                             {
       TLS_setName("lua");
-      logInfo("VCV: Lua thread started");
-      od::AppInterpreter interp;
-      interp.init();
-      logInfo("VCV: AppInterpreter initialized");
-      interp.execute("package.path = '%s/?.lua;%s/?/init.lua'",
-                     globalConfig.xRoot, globalConfig.xRoot);
-      interp.execute("app.EMULATION = true");
-      interp.execute("app.roots = {x='%s',rear='%s',front='%s'}",
-                     globalConfig.xRoot, globalConfig.rearRoot, globalConfig.frontRoot);
-      logInfo("VCV: Running logging.lua...");
-      interp.execute("dofile('%s/boot/logging.lua')", globalConfig.xRoot);
-      logInfo("VCV: Running start.lua...");
-      interp.execute("dofile('%s/boot/start.lua')", globalConfig.xRoot);
-      logInfo("VCV: start.lua finished");
-      engineReady.store(true, std::memory_order_release); });
+      try
+      {
+        logInfo("VCV: Lua thread started");
+        od::AppInterpreter interp;
+        interp.init();
+        logInfo("VCV: AppInterpreter initialized");
+        interp.execute("package.path = '%s/?.lua;%s/?/init.lua'",
+                       globalConfig.xRoot, globalConfig.xRoot);
+        interp.execute("app.EMULATION = true");
+        interp.execute("app.roots = {x='%s',rear='%s',front='%s'}",
+                       globalConfig.xRoot, globalConfig.rearRoot, globalConfig.frontRoot);
+        logInfo("VCV: Running logging.lua...");
+        interp.execute("dofile('%s/boot/logging.lua')", globalConfig.xRoot);
+        logInfo("VCV: Running start.lua...");
+        interp.execute("dofile('%s/boot/start.lua')", globalConfig.xRoot);
+        logInfo("VCV: start.lua finished");
+        engineReady.store(true, std::memory_order_release);
+      }
+      catch (const std::exception &e)
+      {
+        engineError = std::string("Lua engine failed: ") + e.what();
+        engineFailed.store(true, std::memory_order_release);
+        WARN("ER-301: %s", engineError.c_str());
+      }
+      catch (...)
+      {
+        engineError = "Lua engine failed: unknown error";
+        engineFailed.store(true, std::memory_order_release);
+        WARN("ER-301: %s", engineError.c_str());
+      } });
 
     Audio_start();
   }
@@ -308,6 +368,11 @@ struct ER301Module : Module
     {
       initEngine();
     }
+
+    // Skip all processing if engine failed
+    if (engineFailed.load(std::memory_order_acquire))
+      return;
+
 
     // Write one sample of input into the interleaved input frame
     int offset = framePos * NUM_INPUT_CHANNELS;
@@ -807,13 +872,48 @@ struct ER301Widget : ModuleWidget
   {
     NVGcontext *vg = args.vg;
 
-    // Trigger display update
-    ER301Module *mod = dynamic_cast<ER301Module *>(module);
-    if (mod && mod->audioReady.load(std::memory_order_acquire))
-      Events_push(EVENT_DISPLAY_READY);
-
     // Draw SVG panel and all child widgets first
     ModuleWidget::draw(args);
+
+    ER301Module *mod = dynamic_cast<ER301Module *>(module);
+
+    // ── Error overlay ──
+    if (mod && mod->engineFailed.load(std::memory_order_acquire))
+    {
+      // Red tinted overlay on main display area
+      nvgBeginPath(vg);
+      nvgRoundedRect(vg, mainDispX, mainDispY, mainDispW, mainDispH, 4.0f);
+      nvgFillColor(vg, nvgRGBA(40, 0, 0, 220));
+      nvgFill(vg);
+
+      // Error text
+      nvgFontSize(vg, 11.0f);
+      nvgFillColor(vg, nvgRGBA(255, 60, 60, 255));
+      nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_TOP);
+      nvgText(vg, mainDispX + mainDispW / 2, mainDispY + 6, "ER-301 ENGINE ERROR", NULL);
+
+      nvgFontSize(vg, 9.0f);
+      nvgFillColor(vg, nvgRGBA(200, 200, 200, 255));
+      nvgTextBox(vg, mainDispX + 4, mainDispY + 22, mainDispW - 8,
+                 mod->engineError.c_str(), NULL);
+
+      // Also show on sub display
+      nvgBeginPath(vg);
+      nvgRoundedRect(vg, subDispX, subDispY, subDispW, subDispH, 3.0f);
+      nvgFillColor(vg, nvgRGBA(40, 0, 0, 220));
+      nvgFill(vg);
+
+      nvgFontSize(vg, 9.0f);
+      nvgFillColor(vg, nvgRGBA(255, 60, 60, 255));
+      nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+      nvgText(vg, subDispX + subDispW / 2, subDispY + subDispH / 2,
+              "See log: ~/.od/er301-vcv.log", NULL);
+      return;
+    }
+
+    // Trigger display update
+    if (mod && mod->audioReady.load(std::memory_order_acquire))
+      Events_push(EVENT_DISPLAY_READY);
 
     // ── Main Display (render pixel buffer on top of SVG display area) ──
     DisplayBuffer *dispBuf = Display_getLastPutBuffer();
@@ -851,7 +951,19 @@ struct ER301Widget : ModuleWidget
         nvgFill(vg);
       }
     }
+
+    // ── Sample rate warning ──
+    if (mod && !mod->sampleRateWarning.empty())
+    {
+      nvgFontSize(vg, 8.0f);
+      nvgFillColor(vg, nvgRGBA(255, 217, 0, 180));
+      nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_TOP);
+      nvgText(vg, mainDispX + mainDispW - 3, mainDispY + 3,
+              mod->sampleRateWarning.c_str(), NULL);
+    }
   }
 };
+
+std::atomic<int> ER301Module::instanceCount{0};
 
 Model *modelER301 = createModel<ER301Module, ER301Widget>("ER301");

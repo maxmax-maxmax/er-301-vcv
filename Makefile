@@ -112,6 +112,9 @@ include $(RACK_DIR)/plugin.mk
 
 # Direct install (bypasses zstd packaging)
 PLUGINS_DIR ?= $(HOME)/Library/Application Support/Rack2/plugins-mac-arm64
-direct-install: all dist
+direct-install: all
+	mkdir -p dist/ER-301
+	cp plugin.dylib plugin.json dist/ER-301/
+	rsync -a res dist/ER-301/
 	rsync -a dist/ER-301/ "$(PLUGINS_DIR)/ER-301/"
 	@echo "Installed to $(PLUGINS_DIR)/ER-301/"
