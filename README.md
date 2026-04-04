@@ -41,7 +41,7 @@ This is not a simplified emulation — it runs the actual ER-301 firmware with a
 ### Quick Wins
 - [ ] **Toggle persistence** — Save/restore toggle positions in VCV patch JSON (`dataToJson`/`dataFromJson`)
 - [ ] **Error handling** — Wrap Lua thread in try/catch, show error overlay on display if engine fails
-- [ ] **Right-click context menu** — Show log paths, xroot/rear/front paths, link to docs
+- [ ] **Right-click context menu** — Show log paths, xroot/rear/front paths, link to docs. Disable VCV's "Randomize" action (or override it to randomize ER-301 internal patch — add random units at different chain levels inside the ER-301 engine)
 - [ ] **Single instance guard** — Detect and warn if a second module instance is added
 - [ ] **Button/knob tooltips** — Add hover tooltips to custom buttons (M1-M6, S1-S3, fine/coarse, cancel, zero, enter, up, shift), encoder knob, and toggles (storage, mode)
 - [ ] **Keyboard shortcuts** — Map keyboard keys to buttons (like the ER-301 emulator), enabling button combos (SHIFT+ENTER, SHIFT+SELECT for mute, SELECT+SELECT for channel linking)
