@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="8.5mm" height="8.5mm" viewBox="0 0 24.09 24.09">
+  <!-- ER-301 grey tactile button -->
+  <rect x="0.5" y="0.5" width="23.09" height="23.09" rx="3" ry="3"
+        style="fill:#4d4d4d;stroke:#555;stroke-width:0.4"/>
+  <rect x="2" y="2" width="20.09" height="20.09" rx="2.5" ry="2.5"
+        style="fill:#5a5a5a"/>
+  <!-- Subtle highlight -->
+  <rect x="2" y="2" width="20.09" height="10" rx="2.5" ry="2.5"
+        style="fill:#666;opacity:0.2"/>
+</svg>

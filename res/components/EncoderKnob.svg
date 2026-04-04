@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="29.5mm" height="29.5mm" viewBox="0 0 83.6 83.6">
+  <!-- ER-301 rubber encoder knob -->
+  <!-- Outer ring shadow -->
+  <circle cx="41.8" cy="41.8" r="40" style="fill:#1a1a1a"/>
+  <!-- Main body -->
+  <circle cx="41.8" cy="41.8" r="38" style="fill:#2a2a2a"/>
+  <!-- Rubber grip ring -->
+  <circle cx="41.8" cy="41.8" r="36" style="fill:none;stroke:#333;stroke-width:3"/>
+  <!-- Inner knurled texture ring -->
+  <circle cx="41.8" cy="41.8" r="32" style="fill:#252525"/>
+  <!-- Grip lines (subtle radial texture) -->
+  <circle cx="41.8" cy="41.8" r="28" style="fill:none;stroke:#1e1e1e;stroke-width:1.5"/>
+  <circle cx="41.8" cy="41.8" r="24" style="fill:none;stroke:#222;stroke-width:1"/>
+  <!-- Center cap -->
+  <circle cx="41.8" cy="41.8" r="14" style="fill:#1a1a1a;stroke:#111;stroke-width:0.8"/>
+  <!-- Top highlight for 3D effect -->
+  <ellipse cx="41.8" cy="32" rx="20" ry="12" style="fill:#444;opacity:0.12"/>
+</svg>
