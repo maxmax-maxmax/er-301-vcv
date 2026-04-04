@@ -75,4 +75,11 @@ Add `description` strings to custom widgets. VCV shows tooltips on hover for sta
 ### 4. Right-click context menu
 Override `appendContextMenu` on `ER301Widget` to add: log file path, xroot/rear/front paths, link to docs. Override or disable VCV's built-in "Randomize" (or repurpose it to insert random ER-301 units at different chain levels).
 
+### 5. Mouse & keyboard interaction improvements
+The real ER-301 has a physical encoder and buttons — in VCV we can do better. Key ideas:
+- **Keyboard text input** — When the ER-301 UI is in a search/rename context, intercept `onHoverKey` text events and feed characters into the engine instead of requiring encoder scrolling through an alphabet. This is exploratory — it depends on how the Lua UI handles text input internally (may need to inject keypress events or call Lua functions directly).
+- **Click-drag scrolling on displays** — Detect drag gestures over the main/sub display areas and translate vertical movement into encoder deltas, giving a touch-screen feel for scrolling lists and menus.
+- **Mouse wheel on displays** — Forward scroll wheel events over display areas to the encoder, so you don't have to hover over the knob to scroll.
+- The feasibility of text input depends on whether the ER-301 Lua UI exposes a text entry API or if it's purely encoder-driven. Needs investigation.
+
 After usability, the next priority is **persistence** (Phase 2) — saving toggle state and triggering quicksaves on VCV patch save/load.

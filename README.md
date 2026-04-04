@@ -31,6 +31,7 @@ Working prototype. The full ER-301 engine runs inside VCV Rack with all 80+ core
 - [ ] Toggle click from center — Cycle state by clicking the middle zone (in addition to top/bottom regions)
 - [ ] Button/knob tooltips — Hover tooltips on all custom controls
 - [ ] Right-click context menu — Show log/data paths, link to docs. Override VCV "Randomize" to insert random ER-301 units
+- [ ] Mouse & keyboard interaction — Keyboard text input for searching/naming (instead of encoder-only), click-drag scrolling on display for touch-style list navigation, mouse wheel on display areas for faster browsing. Goal: make the plugin comfortable to use without a physical controller
 
 ### Phase 2 — Persistence
 - [ ] Toggle persistence — Save/restore toggle positions via `dataToJson`/`dataFromJson`
