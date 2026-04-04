@@ -7,15 +7,58 @@ This is not a simplified emulation — it runs the actual ER-301 firmware with a
 ## Features
 
 - Full ER-301 engine running inside VCV Rack
-- 30HP panel matching the physical module layout
-- Main display (256x64, 4-bit grayscale) and sub display (128x64, 1-bit mono) with amber tint, rendered via NanoVG
-- 20 inputs: 4 audio (IN1–IN4), 12 CV (A1–D3), 4 gate (G1–G4)
-- 4 outputs (OUT1–OUT4)
-- Interactive controls: 19 buttons, rotary encoder, 2 toggle switches (STORAGE, MODE)
-- 11 LEDs: output levels, link indicators, fine/coarse, I/O, safe, and bicolor CV LEDs
-- Pill-shaped silkscreen labels (QUICKSAVE, FOCUS, HOME, COMMIT) matching the real panel
-- Outlined select buttons (1–4) with dashed column dividers between G/IN/OUT sections
+- 30HP SVG panel matching the physical module layout
+- Main display (256x64, 4-bit grayscale) and sub display (128x64, 1-bit mono) with amber tint, rendered via NanoVG with rounded corners
+- 20 inputs: 4 audio (IN1-IN4), 12 CV (A1-D3), 4 gate (G1-G4)
+- 4 outputs (OUT1-OUT4)
+- 19 buttons (grey tactile + blue function) with SVG artwork and press-darken feedback
+- Rotary encoder (Rogan2SGray knob) with visual rotation on drag/scroll
+- 2 toggle switches (STORAGE, MODE) using NKK 3-position SVGs
+- LEDs: output levels (yellow), link indicators (red), fine/coarse, I/O, safe, and bicolor green/red CV input LEDs driven by PWM readback
 - Audio bridge with 128-sample frame buffering (~2.67ms latency at 48kHz)
+
+## What's Been Done
+
+### Phase 1-3: Core Engine Integration
+- **Audio bridge**: 128-sample ring buffer bridging VCV's sample-by-sample processing to ER-301's frame-based DSP via `Pump_callback()`
+- **VCV HAL layer**: ~18 files in `src/hal/` replacing the ER-301's SDL-based emulator HAL (display, GPIO, encoder, timing, audio, card/filesystem, logging, threading, etc.)
+- **Display decoding**: Main display (256x64, 4-bit grayscale packed) and sub display (128x64, 1-bit packed) decoded and rendered via NanoVG
+- **Interactive controls**: 19 GPIO-mapped buttons, encoder knob with drag/scroll, 2 toggle switches
+- **Lua interpreter**: ER-301's full Lua UI boots on a separate thread, running `start.lua`
+
+### Phase 4-6: Panel Visual Matching
+- Iterated through HTML Canvas preview and NanoVG-drawn panel approaches
+- Arrived at Panel.png background with transparent widget overlays
+
+### Phase 7: SVG Panel Transition (current)
+- Replaced PNG panel with standard VCV SVG panel workflow (`setPanel(createPanel(...))`)
+- Panel built in Inkscape with proper VCV component layer (color-coded placeholders for inputs/outputs/lights/custom widgets)
+- All widget positions generated via VCV `helper.py` using `mm2px()` coordinates
+- Custom SVG component artwork: grey and blue button SVGs, Rogan2SGray encoder knob, NKK 3-position toggle switch SVGs
+- Encoder knob visually rotates when dragged/scrolled
+- Buttons darken on press
+- Display overlays render with rounded corners on top of the SVG panel
+
+## What's Left
+
+### Verification
+- Fine-tune display positions to sit perfectly within the SVG panel bezels
+- Verify all 19 button-to-GPIO mappings are correct
+- Test toggle switch state persistence
+
+### Functional Gaps
+- **Encoder button press** — the physical ER-301 encoder has a push-button (used for selection); not yet wired
+- **SD card / file system** — `card.cpp` has a basic implementation but saving/loading presets needs testing
+- **USB emulation** — `usb.cpp` exists but likely stubbed
+- **Audio sample rate matching** — ER-301 expects specific rates (48kHz/96kHz); VCV Rack runs at variable rates
+- **Module state persistence** — saving/restoring module state when VCV patches are saved/loaded
+- **Performance** — Lua interpreter + DSP engine running alongside VCV Rack may need profiling
+- **Single instance only** — ER-301 uses global state; only one module instance is supported
+
+### Polish
+- Right-click context menu for module settings
+- Error handling if ER-301 engine fails to initialize
+- Core DSP packages (mods/) not yet bundled
 
 ## Prerequisites
 
@@ -57,9 +100,10 @@ The plugin replaces the ER-301's SDL-based emulator HAL with a VCV-native HAL la
 | Component | ER-301 Emulator | VCV Plugin |
 |---|---|---|
 | Audio I/O | SDL audio callback | `Module::process()` with ring buffer |
-| Display | SDL textures | NanoVG `nvgCreateImageRGBA` |
-| Buttons/GPIO | SDL keyboard/mouse | `OpaqueWidget` click handlers |
-| Encoder | SDL mouse wheel | Draggable knob widget |
+| Display | SDL textures | NanoVG `nvgCreateImageRGBA` on SVG panel |
+| Buttons/GPIO | SDL keyboard/mouse | `SvgWidget` with click handlers |
+| Encoder | SDL mouse wheel | Draggable knob with visual rotation |
+| Toggles | SDL keyboard | NKK 3-position `SvgWidget` |
 | Concurrency | SDL threads/mutexes | `std::thread` / `std::mutex` |
 | Timing | SDL ticks | `std::chrono` |
 | Logging | stdout | `~/.od/er301-vcv.log` |
@@ -67,19 +111,18 @@ The plugin replaces the ER-301's SDL-based emulator HAL with a VCV-native HAL la
 
 The audio bridge accumulates VCV's sample-by-sample calls into 128-sample frames, then calls the ER-301 `Pump_callback()` synchronously. This introduces ~2.67ms latency at 48kHz.
 
-## Panel Preview
+## File Structure
 
-Open `panel-preview.html` in a browser to see a 2x preview of the panel layout without needing to build or run VCV Rack. This is useful for iterating on visual design.
-
-## Current Status
-
-This is a work in progress. The engine boots, displays render, and controls are interactive. Known limitations:
-
-- Single instance only (ER-301 uses global state)
-- macOS only (tested on Apple Silicon)
-- Sample rate must match ER-301 expectations (48kHz / 96kHz)
-- No state save/restore yet
-- Core DSP packages (mods/) not yet bundled
+```
+src/
+  ER301Module.cpp    — Main module: engine integration, widget classes, panel layout
+  hal/               — VCV HAL implementations (~18 files)
+res/
+  ER301.svg          — SVG panel (built in Inkscape, components layer hidden)
+  components/        — SVG artwork for buttons, knob, toggles
+er-301/              — Symlink to ER-301 source tree
+Rack-SDK/            — VCV Rack SDK
+```
 
 ## License
 
