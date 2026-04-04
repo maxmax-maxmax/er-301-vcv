@@ -38,26 +38,31 @@ This is not a simplified emulation — it runs the actual ER-301 firmware with a
 
 ## Roadmap
 
-### Quick Wins
-- [ ] **Toggle persistence** — Save/restore toggle positions in VCV patch JSON (`dataToJson`/`dataFromJson`)
+### Phase 1 — Stability & Safety
 - [ ] **Error handling** — Wrap Lua thread in try/catch, show error overlay on display if engine fails
-- [ ] **Right-click context menu** — Show log paths, xroot/rear/front paths, link to docs. Disable VCV's "Randomize" action (or override it to randomize ER-301 internal patch — add random units at different chain levels inside the ER-301 engine)
 - [ ] **Single instance guard** — Detect and warn if a second module instance is added
-- [ ] **Button/knob tooltips** — Add hover tooltips to custom buttons (M1-M6, S1-S3, fine/coarse, cancel, zero, enter, up, shift), encoder knob, and toggles (storage, mode)
-- [ ] **Keyboard shortcuts** — Map keyboard keys to buttons (like the ER-301 emulator), enabling button combos (SHIFT+ENTER, SHIFT+SELECT for mute, SELECT+SELECT for channel linking)
-- [ ] **MIDI mapping** — Allow MIDI CC/note mapping to buttons, encoder, and toggles for hardware controller integration
-
-### Medium Effort
 - [ ] **Sample rate matching** — Set `globalConfig.sampleRate` to match VCV's rate at init; warn if rate changes mid-session
+
+### Phase 2 — Usability
+- [ ] **Keyboard shortcuts** — Map keyboard keys to buttons (like the ER-301 emulator), enabling button combos (SHIFT+ENTER, SHIFT+SELECT for mute, SELECT+SELECT for channel linking)
+- [ ] **Toggle click from center** — Allow clicking the center of the toggle to cycle state (in addition to current top/bottom click regions)
+- [ ] **Button/knob tooltips** — Add hover tooltips to custom buttons (M1-M6, S1-S3, fine/coarse, cancel, zero, enter, up, shift), encoder knob, and toggles (storage, mode)
+- [ ] **Right-click context menu** — Show log paths, xroot/rear/front paths, link to docs. Disable VCV's "Randomize" action (or override it to randomize ER-301 internal patch — add random units at different chain levels inside the ER-301 engine)
+
+### Phase 3 — Persistence
+- [ ] **Toggle persistence** — Save/restore toggle positions in VCV patch JSON (`dataToJson`/`dataFromJson`)
 - [ ] **SD card / filesystem testing** — Validate quicksaves, preset save/load, WAV sample loading
 - [ ] **Module state persistence** — Trigger quicksave on VCV patch save, restore on load after engine init
+
+### Phase 4 — Integration
+- [ ] **MIDI mapping** — Allow MIDI CC/note mapping to buttons, encoder, and toggles for hardware controller integration
 - [ ] **Performance profiling** — Add timing around `Pump_callback()`, track frame processing time
 
-### Hard / Research
+### Phase 5 — Deep Work
 - [ ] **Full engine state save/restore** — Serialize complete Lua + DSP state beyond quicksaves
 - [ ] **Multi-instance support** — Would require refactoring all ER-301 global state (probably not worth it)
 
-### VCV Library Publication
+### Phase 6 — VCV Library Publication
 - [ ] **Brand permission** — Get explicit approval from Orthogonal Devices (Brian Clarkson) to use ER-301 name and panel design, or rebrand
 - [ ] **Static FFTW** — Replace Homebrew dynamic link with static build in `dep/` for cross-compilation
 - [ ] **Pre-generate SWIG** — Commit `app_swig.cpp` to repo so SWIG isn't needed at build time
