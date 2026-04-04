@@ -44,6 +44,8 @@ This is not a simplified emulation — it runs the actual ER-301 firmware with a
 - [ ] **Right-click context menu** — Show log paths, xroot/rear/front paths, link to docs
 - [ ] **Single instance guard** — Detect and warn if a second module instance is added
 - [ ] **Button/knob tooltips** — Add hover tooltips to custom buttons (M1-M6, S1-S3, fine/coarse, cancel, zero, enter, up, shift), encoder knob, and toggles (storage, mode)
+- [ ] **Keyboard shortcuts** — Map keyboard keys to buttons (like the ER-301 emulator), enabling button combos (SHIFT+ENTER, SHIFT+SELECT for mute, SELECT+SELECT for channel linking)
+- [ ] **MIDI mapping** — Allow MIDI CC/note mapping to buttons, encoder, and toggles for hardware controller integration
 
 ### Medium Effort
 - [ ] **Sample rate matching** — Set `globalConfig.sampleRate` to match VCV's rate at init; warn if rate changes mid-session
