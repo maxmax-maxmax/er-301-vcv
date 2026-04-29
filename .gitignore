@@ -22,3 +22,8 @@ er-301
 
 # Development archive
 archive/
+
+# Editor / agent local config
+.claude/
+.vscode/
+.idea/

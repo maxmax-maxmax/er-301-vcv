@@ -74,32 +74,53 @@ The audio bridge accumulates VCV's sample-by-sample calls into 128-sample frames
 
 ## Building
 
+> **Tested only on macOS (Apple Silicon).** The Makefile detects `arm64` vs `x86_64` automatically, but only the ARM64 path has been verified. Linux/Windows are not supported yet — see Phase 5 of the roadmap.
+
 ### Prerequisites
 
-- [VCV Rack 2 SDK](https://vcvrack.com/manual/Building)
-- [ER-301 source code](https://github.com/odevices/er-301)
-- [FFTW3](http://www.fftw.org/) — `brew install fftw`
-- [SWIG](http://www.swig.org/) — `brew install swig`
+- macOS with Xcode command-line tools
+- [VCV Rack 2 SDK](https://vcvrack.com/manual/Building) — extract somewhere and remember the path
+- [ER-301 source code](https://github.com/odevices/er-301) — clone somewhere and remember the path
+- Homebrew packages: `brew install fftw swig`
 
-### Steps
+### Step 1 — Build the ER-301 DSP packages
+
+The plugin loads the ER-301's DSP packages (`libcore.so` and friends) at runtime from `~/.od/rear/v0.7/libs/`. They are built and installed from the ER-301 source tree, not from this repo:
 
 ```bash
-git clone <repo-url>
+cd /path/to/er-301
+make ARCH=darwin PROFILE=testing core-install
+```
+
+This compiles the `core` package and installs it to `~/.od/rear/v0.7/libs/core/` (containing `libcore.so` plus all the Lua unit definitions). The plugin will fail to boot without this step.
+
+### Step 2 — Build and install the VCV plugin
+
+```bash
+git clone https://github.com/maxmax-maxmax/er-301-vcv.git
 cd er-301-vcv
 
-# Symlink ER-301 source and VCV Rack SDK
+# Symlinks: ER-301 source tree and VCV Rack SDK
 ln -s /path/to/er-301 er-301
 ln -s /path/to/Rack-SDK Rack-SDK
 
-# Copy Lua scripts to ER-301 data directory
-mkdir -p ~/.od/rear
-cp -r er-301/xroot/* ~/.od/rear/
-
-# Build and install
+# Build and install. If brew isn't on PATH for the build shell, prepend it:
+#   PATH="/opt/homebrew/bin:$PATH" make install
 make install
 ```
 
-For development, `make direct-install` copies files directly without zstd packaging.
+For iterating during development, `make direct-install` copies files into the VCV plugins folder directly without going through zstd packaging.
+
+### Step 3 — Verify
+
+Launch VCV Rack at **48 kHz** (Engine → Sample Rate). Add the *ER-301 Sound Computer* module. The displays should boot and show the ER-301 home screen. If something goes wrong, the module overlays an error message and writes a log to `~/.od/er301-vcv.log`.
+
+### Common pitfalls
+
+- **Black screen / "engine init failed"** — usually means Step 1 was skipped or the ER-301 source path is wrong. Check `~/.od/er301-vcv.log`.
+- **`ld: library 'fftw3f' not found`** — Homebrew isn't on the build shell's PATH. Run with `PATH="/opt/homebrew/bin:$PATH" make install`.
+- **No audio / silence** — confirm VCV is at 48 kHz; the plugin shows a warning otherwise.
+- **Second instance shows error overlay** — by design, only one ER-301 module can be loaded at a time (global state in the firmware).
 
 ## File Structure
 
