@@ -4,10 +4,10 @@
   "version": "2.0.0",
   "license": "GPL-3.0-or-later",
   "brand": "ER-301",
-  "author": "maxmax-maxmax",
-  "authorUrl": "https://github.com/maxmax-maxmax",
-  "pluginUrl": "https://github.com/maxmax-maxmax/er-301-vcv",
-  "sourceUrl": "https://github.com/maxmax-maxmax/er-301-vcv",
+  "author": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "sourceUrl": "",
   "modules": [
     {
       "slug": "ER301",

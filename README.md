@@ -84,7 +84,7 @@ The audio bridge accumulates VCV's sample-by-sample calls into 128-sample frames
 ### Steps
 
 ```bash
-git clone https://github.com/maxmax-maxmax/er-301-vcv.git
+git clone <repo-url>
 cd er-301-vcv
 
 # Symlink ER-301 source and VCV Rack SDK
